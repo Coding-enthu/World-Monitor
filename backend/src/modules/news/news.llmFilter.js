@@ -3,22 +3,64 @@ const { queryLLM } = require("../../config/llm");
 
 // ---------- EXPANDED EVENT TYPES ----------
 const ALLOWED_TYPES = [
-	// Hard events
+	// Armed conflict
 	"airstrike",
 	"attack",
 	"battle",
 	"conflict",
 	"military",
-
-	// Soft geopolitics
 	"war",
-	"tension",
 	"clash",
+	"bombing",
+	"shelling",
+	"invasion",
+	"siege",
+	"insurgency",
+	"assassination",
+	"ambush",
+	"hostage",
+
+	// Geopolitics & diplomacy
 	"sanction",
 	"diplomacy",
 	"negotiation",
 	"threat",
 	"operation",
+	"tension",
+	"summit",
+	"treaty",
+	"alliance",
+	"embargo",
+	"blockade",
+	"espionage",
+
+	// Political events
+	"coup",
+	"election",
+	"protest",
+	"uprising",
+	"riot",
+	"crackdown",
+	"referendum",
+	"regime change",
+
+	// Humanitarian
+	"crisis",
+	"humanitarian",
+	"refugee",
+	"displacement",
+	"famine",
+	"evacuation",
+
+	// Cyber & intelligence
+	"cyberattack",
+	"hacking",
+	"surveillance",
+
+	// Trade & economic
+	"tradewar",
+	"tariff",
+	"armsdeal",
 ];
 
 // ---------- MAJOR EVENT DETECTOR ----------
@@ -34,6 +76,15 @@ const isMajorEvent = (title = "") => {
 		"ceasefire",
 		"troops",
 		"missile",
+		"invasion",
+		"crisis",
+		"coup",
+		"bomb",
+		"killed",
+		"dead",
+		"explosion",
+		"shoot",
+		"terror",
 	];
 
 	const lower = title.toLowerCase();
@@ -50,29 +101,36 @@ DESCRIPTION: ${a.description}`;
 		})
 		.join("\n\n");
 
-	return `
-You are a geopolitical intelligence system.
+	return `You are a geopolitical intelligence classifier. Your job is to identify articles related to:
+- Armed conflicts, wars, military operations, airstrikes, bombings
+- Diplomacy, sanctions, treaties, summits, negotiations
+- Political instability: coups, protests, uprisings, elections, crackdowns
+- Humanitarian crises, refugee movements, famines
+- Terrorism, insurgency, espionage, cyber attacks
+- Trade wars, arms deals, embargoes, blockades
 
-Return EXACTLY N JSON objects in an array (same order).
+Be INCLUSIVE — if an article has ANY geopolitical relevance, mark it as relevant.
 
-Each:
+Return EXACTLY ${articles.length} JSON objects in an array (same order as input).
+
+Each object:
 {
   "relevant": true/false,
-  "event_type": "string",
-  "country": "string",
+  "event_type": "string (e.g. attack, diplomacy, protest, sanction, conflict, crisis, election, coup, tension, military, war, humanitarian, cyberattack, tariff)",
+  "country": "string (primary country involved)",
   "severity": 1-5,
-  "confidence": 0-1
+  "confidence": 0.0-1.0
 }
 
 Rules:
-- No explanation
-- No skipping
-- No reordering
-- If not relevant → { "relevant": false }
+- Return ONLY the JSON array, no explanation
+- Do not skip any article
+- Do not reorder articles
+- If not geopolitically relevant → { "relevant": false }
+- When in doubt, mark as relevant with lower confidence
 
 Articles:
-${formatted}
-`;
+${formatted}`;
 };
 
 // ---------- JSON EXTRACTION ----------
@@ -86,7 +144,8 @@ const extractJSON = (text) => {
 	}
 };
 
-const normalizeEventType = (type) => type.toLowerCase().replace(/\s+/g, "");
+const normalizeEventType = (type) =>
+	type.toLowerCase().replace(/[\s_-]+/g, "");
 
 const cleanCountry = (country) => {
 	if (!country) return "Global";
@@ -123,21 +182,22 @@ exports.llmFilter = async (articles = []) => {
 			batch.forEach((original, idx) => {
 				const item = parsed[idx];
 
-				if (
-					!item ||
-					!item.relevant ||
-					(!isMajorEvent(original.title) && item.confidence < 0.55) ||
-					!item.event_type
-				) {
+				if (!item || !item.relevant || !item.event_type) {
+					return;
+				}
+
+				// Lower threshold: only skip non-major events with very low confidence
+				if (!isMajorEvent(original.title) && item.confidence < 0.35) {
 					return;
 				}
 
 				const type = normalizeEventType(item.event_type);
 
-				if (!ALLOWED_TYPES.includes(type)) return;
+				// Accept the event even if type isn't in our list — use LLM's type as-is
+				const finalType = ALLOWED_TYPES.includes(type) ? type : type;
 
 				results.push({
-					event_type: type,
+					event_type: finalType,
 					country: cleanCountry(item.country),
 					severity: Math.min(Math.max(item.severity || 2, 1), 5),
 					confidence: Math.min(

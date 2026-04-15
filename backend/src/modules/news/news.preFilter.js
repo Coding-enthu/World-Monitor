@@ -1,17 +1,16 @@
 const logger = require("../../utils/logger.js");
 
-// Strong keywords (must match at least one)
+// Geopolitical keywords (must match at least one)
 const WHITELIST = [
+	// Armed conflict
 	"war",
 	"military",
 	"conflict",
 	"attack",
 	"bombing",
 	"troops",
-	"sanctions",
 	"invasion",
 	"coup",
-	"protest",
 	"missile",
 	"drone",
 	"airstrike",
@@ -20,23 +19,91 @@ const WHITELIST = [
 	"terror",
 	"violence",
 	"clashes",
-    "opinion"
+	"insurgent",
+	"rebel",
+	"militia",
+	"ambush",
+	"shelling",
+	"artillery",
+	"offensive",
+	"siege",
+	"hostage",
+	"kidnap",
+	"assassination",
+	"explosive",
+
+	// Diplomacy & politics
+	"sanctions",
+	"diplomacy",
+	"diplomatic",
+	"treaty",
+	"summit",
+	"alliance",
+	"embargo",
+	"blockade",
+	"geopolitic",
+	"nato",
+	"united nations",
+	"security council",
+	"foreign minister",
+	"defense minister",
+	"prime minister",
+	"president",
+	"election",
+	"referendum",
+	"parliament",
+	"authoritarian",
+	"regime",
+	"opposition",
+
+	// Unrest & humanitarian
+	"protest",
+	"uprising",
+	"riot",
+	"crackdown",
+	"martial law",
+	"curfew",
+	"refugee",
+	"humanitarian",
+	"crisis",
+	"famine",
+	"displacement",
+	"evacuation",
+
+	// Intelligence & cyber
+	"espionage",
+	"spy",
+	"intelligence",
+	"cyber attack",
+	"hacking",
+	"surveillance",
+
+	// Trade & economic warfare
+	"trade war",
+	"tariff",
+	"arms deal",
+	"weapons",
+	"defense",
+	"defence",
 ];
 
-// Weak keywords (must NOT match)
+// Non-geopolitical keywords (reject if ONLY these appear)
 const BLACKLIST = [
-	"stock",
-	"market",
+	"stock market",
 	"celebrity",
 	"movie",
 	"film",
-	"sports",
+	"box office",
+	"sports score",
 	"recipe",
 	"entertainment",
 	"fashion",
-	"review",
-	"opinion",
-	"interview",
+	"reality tv",
+	"horoscope",
+	"lifestyle",
+	"dating",
+	"workout",
+	"diet",
 ];
 
 // Normalize text safely
@@ -80,17 +147,6 @@ exports.preFilter = (articles = []) => {
 		`Filtered ${articles.length} → ${filtered.length}`,
 		"news.preFilter",
 	);
-
-	// Optional debug (uncomment if needed)
-	/*
-  logger.debug(
-    `Sample filtered titles:\n${filtered
-      .slice(0, 3)
-      .map(a => "- " + a.title)
-      .join("\n")}`,
-    "news.preFilter"
-  );
-  */
 
 	return filtered;
 };

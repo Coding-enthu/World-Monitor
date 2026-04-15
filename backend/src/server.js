@@ -17,8 +17,8 @@ const server = app.listen(PORT, () => {
 	await runNewsPipeline();
 })();
 
-// ---------- CRON JOB (EVERY 5 MIN) ----------
-cron.schedule("*/5 * * * *", async () => {
+// ---------- CRON JOB (EVERY 10 MIN) ----------
+cron.schedule("*/10 * * * *", async () => {
 	logger.info("Cron triggered", "cron");
 	await runNewsPipeline();
 });
