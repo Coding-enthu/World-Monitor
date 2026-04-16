@@ -43,6 +43,8 @@ const ALLOWED_TYPES = [
 	"crackdown",
 	"referendum",
 	"regime change",
+	"rebellion",
+	"strike",
 
 	// Humanitarian
 	"crisis",
@@ -51,6 +53,7 @@ const ALLOWED_TYPES = [
 	"displacement",
 	"famine",
 	"evacuation",
+	"mass-death",
 
 	// Cyber & intelligence
 	"cyberattack",
@@ -61,30 +64,29 @@ const ALLOWED_TYPES = [
 	"tradewar",
 	"tariff",
 	"armsdeal",
+	"economy",
+	"business",
+
+	// Health, Environment & Politics
+	"pandemic",
+	"disaster",
+	"environment",
+	"politics",
 ];
 
 // ---------- MAJOR EVENT DETECTOR ----------
 const isMajorEvent = (title = "") => {
 	const keywords = [
-		"war",
-		"blockade",
-		"nuclear",
-		"sanction",
-		"military",
-		"attack",
-		"strike",
-		"ceasefire",
-		"troops",
-		"missile",
-		"invasion",
-		"crisis",
-		"coup",
-		"bomb",
-		"killed",
-		"dead",
-		"explosion",
-		"shoot",
-		"terror",
+		// Conflict & geopolitics
+		"war", "blockade", "nuclear", "sanction", "military", "attack", 
+		"strike", "ceasefire", "troops", "missile", "invasion", "crisis", 
+		"coup", "bomb", "killed", "dead", "explosion", "shoot", "terror",
+		"rebellion",
+		
+		// Major globally impactful terms
+		"economy", "market", "breaking", "emergency", "disaster", "earthquake", 
+		"pandemic", "election", "scandal", "breakthrough", "historic", "global",
+		"mass-death", "policy", "legislation", "reform", "law", "government"
 	];
 
 	const lower = title.toLowerCase();
@@ -101,23 +103,23 @@ DESCRIPTION: ${a.description}`;
 		})
 		.join("\n\n");
 
-	return `You are a geopolitical intelligence classifier. Your job is to identify articles related to:
-- Armed conflicts, wars, military operations, airstrikes, bombings
-- Diplomacy, sanctions, treaties, summits, negotiations
-- Political instability: coups, protests, uprisings, elections, crackdowns
-- Humanitarian crises, refugee movements, famines
-- Terrorism, insurgency, espionage, cyber attacks
-- Trade wars, arms deals, embargoes, blockades
+	return `You are a global intelligence and major world news classifier. Your job is to identify important, impactful news articles related to:
+- Geopolitics: Armed conflicts, diplomacy, politics, humanitarian crises, terrorism
+- Major policy changes, impactful legislation, sweeping reforms, and significant government rulings
+- Major global events, natural disasters, environmental crises
+- Major economic, financial, or business shifts
 
-Be INCLUSIVE — if an article has ANY geopolitical relevance, mark it as relevant.
+Be HIGHLY INCLUSIVE of any major news involving the world and people. 
+CRITICAL: Do NOT over-filter! Only exclude literal consumer product reviews/gadgets, sports scores, and celebrity gossip. If it is a real news event, include it!
 
 Return EXACTLY ${articles.length} JSON objects in an array (same order as input).
 
 Each object:
 {
   "relevant": true/false,
-  "event_type": "string (e.g. attack, diplomacy, protest, sanction, conflict, crisis, election, coup, tension, military, war, humanitarian, cyberattack, tariff)",
-  "country": "string (primary country involved)",
+  "event_type": "string (e.g. conflict, diplomacy, election, disaster, economy, pandemic, crisis, politics, etc.)",
+  "country": "string (The physical country WHERE the event took place, or Global)",
+  "coordinates": "[latitude, longitude] array of numbers (The exact geographical [lat, lng] coordinates of the event's location. Extremely important for map placement! Approx city center if exact target unknown. Use null only if purely digital/global)",
   "severity": 1-5,
   "confidence": 0.0-1.0
 }
@@ -126,8 +128,8 @@ Rules:
 - Return ONLY the JSON array, no explanation
 - Do not skip any article
 - Do not reorder articles
-- If not geopolitically relevant → { "relevant": false }
-- When in doubt, mark as relevant with lower confidence
+- If it is pure consumer tech (smartphones/gadgets), gossip, or literal sports scores → { "relevant": false }
+- Default to "relevant": true for almost any real news article. Be highly permissive.
 
 Articles:
 ${formatted}`;
@@ -199,6 +201,7 @@ exports.llmFilter = async (articles = []) => {
 				results.push({
 					event_type: finalType,
 					country: cleanCountry(item.country),
+					coordinates: Array.isArray(item.coordinates) && item.coordinates.length === 2 && typeof item.coordinates[0] === "number" ? item.coordinates : null,
 					severity: Math.min(Math.max(item.severity || 2, 1), 5),
 					confidence: Math.min(
 						Math.max(item.confidence || 0.6, 0),

@@ -10,7 +10,7 @@ exports.fetchFromNewsAPI = async () => {
 
 		const res = await axios.get(NEWS_URL, {
 			params: {
-				q: "war OR military OR conflict OR sanctions OR troops OR attack",
+				q: "world OR global OR policy OR legislation OR reform OR breaking OR crisis OR diplomacy OR economy OR politics OR humanitarian OR military OR war OR attack OR assassination OR bombing OR invasion OR insurgency OR sanction OR negotiation OR summit OR alliance OR blockade OR coup OR election OR protest OR riot OR regime-change OR refugee OR cyberattack OR tradewar OR armsdeal OR business OR pandemic OR disaster OR environment",
 				language: "en",
 				sortBy: "publishedAt",
 				pageSize: 50,

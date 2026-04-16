@@ -64,20 +64,19 @@ const EventMarkers = ({ events, onEventClick, onCountryClick }) => {
     const layerGroup = L.layerGroup();
 
     events.forEach((event) => {
-      if (!event.location || !event.location.lat || !event.location.lng) return;
+      if (!event.location || typeof event.location.lat !== 'number' || typeof event.location.lng !== 'number') return;
 
       const icon = createMarkerIcon(event.category, event.intensity);
       const marker = L.marker([event.location.lat, event.location.lng], { icon });
       
       marker.on('click', () => handleMarkerClick(event));
       
-      // Popup with basic info + country link
       const color = CATEGORY_COLORS[event.category] || '#3B82F6';
       marker.bindTooltip(
-        `<div style="background:#101217;color:#fff;padding:8px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);font-family:'IBM Plex Sans',sans-serif;max-width:220px;">
+        `<div style="background:#101217;color:#fff;padding:8px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);font-family:'IBM Plex Sans',sans-serif;width:max-content;max-width:380px;word-wrap:break-word;white-space:normal;">
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.15em;color:${color};margin-bottom:4px;">${event.category}</div>
-          <div style="font-size:12px;font-weight:500;line-height:1.3;">${event.title.substring(0, 80)}${event.title.length > 80 ? '...' : ''}</div>
-          <div style="font-size:10px;color:#94A3B8;margin-top:4px;">${event.country}</div>
+          <div style="font-size:12px;font-weight:500;line-height:1.4;">${event.title}</div>
+          <div style="font-size:10px;color:#94A3B8;margin-top:6px;">${event.country}</div>
         </div>`,
         {
           direction: 'top',
@@ -103,7 +102,19 @@ const EventMarkers = ({ events, onEventClick, onCountryClick }) => {
   return null;
 };
 
-export default function MapView({ events, onEventClick, onCountryClick }) {
+const MapController = ({ selectedEvent }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (selectedEvent && selectedEvent.location && typeof selectedEvent.location.lat === 'number') {
+      map.flyTo([selectedEvent.location.lat, selectedEvent.location.lng], 5, {
+        duration: 1.5,
+      });
+    }
+  }, [selectedEvent, map]);
+  return null;
+};
+
+export default function MapView({ events, onEventClick, onCountryClick, selectedEvent }) {
   return (
     <div data-testid="map-container" className="absolute inset-0 z-0">
       <style>{`
@@ -140,6 +151,7 @@ export default function MapView({ events, onEventClick, onCountryClick }) {
           attribution=""
           pane="overlayPane"
         />
+        <MapController selectedEvent={selectedEvent} />
         <EventMarkers events={events} onEventClick={onEventClick} onCountryClick={onCountryClick} />
       </MapContainer>
     </div>

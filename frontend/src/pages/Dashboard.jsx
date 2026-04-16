@@ -99,8 +99,12 @@ export default function Dashboard() {
       const q = searchQuery.toLowerCase();
       result = result.filter(e => e.title.toLowerCase().includes(q) || e.description.toLowerCase().includes(q) || e.country.toLowerCase().includes(q));
     }
+    if (timelineDate) {
+      const td = new Date(timelineDate);
+      result = result.filter(e => new Date(e.published_at).toDateString() === td.toDateString());
+    }
     return result;
-  }, [events, activeCategory, searchQuery]);
+  }, [events, activeCategory, searchQuery, timelineDate]);
 
   // Handlers
   const handleEventClick = useCallback((event) => {
@@ -133,10 +137,10 @@ export default function Dashboard() {
     <div className="relative h-screen w-screen overflow-hidden" data-testid="dashboard">
       {/* Map / Globe Layer */}
       {viewMode === '2d' ? (
-        <MapView events={filteredMarkers} onEventClick={handleEventClick} onCountryClick={handleCountryClick} />
+        <MapView events={filteredMarkers} onEventClick={handleEventClick} onCountryClick={handleCountryClick} selectedEvent={selectedEvent} />
       ) : (
         <Suspense fallback={<div className="absolute inset-0 bg-[var(--bg-base)]" />}>
-          <GlobeView events={filteredMarkers} onEventClick={handleEventClick} />
+          <GlobeView events={filteredMarkers} onEventClick={handleEventClick} selectedEvent={selectedEvent} />
         </Suspense>
       )}
 
@@ -146,8 +150,8 @@ export default function Dashboard() {
       {/* Left: Category Filters */}
       <CategoryFilters activeCategory={activeCategory} onCategoryChange={setActiveCategory} stats={stats} />
 
-      {/* Top Right: Controls Row */}
-      <div className="fixed top-4 right-4 z-30 flex items-center gap-2" data-testid="controls-row">
+      {/* Right Column Controls: Search & Toggles */}
+      <div className="fixed top-24 right-4 z-30 flex flex-col items-end gap-2.5" data-testid="controls-column">
         {/* View Toggle */}
         <div className="flex gap-1 glass-panel rounded-md p-1" data-testid="view-toggle">
           <button
