@@ -1,6 +1,11 @@
 require("dotenv").config();
 
-const requiredEnv = ["PORT", "NEWS_API_KEY", "LLM_URL", "LLM_MODEL"];
+const requiredEnv = [
+	"PORT",
+	"NEWS_API_KEY",
+	"LLM_MODEL",
+	"GROQ_API_KEY",
+];
 
 requiredEnv.forEach((key) => {
 	if (!process.env[key]) {
