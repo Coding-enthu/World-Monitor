@@ -1,25 +1,23 @@
-const axios = require("axios");
+const OpenAI = require("openai");
 const config = require("./env.js");
 const logger = require("../utils/logger.js");
 
-const client = axios.create({
-	baseURL: config.LLM.URL,
-	timeout: config.LLM.TIMEOUT,
+const client = new OpenAI({
+	apiKey: process.env.GROQ_API_KEY,
+	baseURL: process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1",
+	timeout: Number(config.LLM.TIMEOUT) || 30000,
 });
 
 exports.queryLLM = async (prompt) => {
 	try {
 		logger.info(`LLM request initiated`, "llm.js");
-		const res = await client.post("", {
+		const response = await client.responses.create({
 			model: config.LLM.MODEL,
-			prompt,
-			stream: false,
-			options: {
-				temperature: 0.2,
-			},
+			input: prompt,
+			temperature: 0.2,
 		});
 
-		return res.data?.response || "";
+		return response.output_text || "";
 	} catch (err) {
 		logger.error(`LLM request failed: ${err.message}`, "llm");
 		throw err;
