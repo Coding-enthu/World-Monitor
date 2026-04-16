@@ -1,0 +1,99 @@
+import axios from 'axios';
+
+// Backend URL — single endpoint
+const API_URL = 'http://localhost:5000/api/geopolitics';
+
+/**
+ * Category color palette matching the backend's CATEGORY_ORDER.
+ * Exported so components can import it instead of duplicating.
+ */
+export const CATEGORY_COLORS = {
+  'Armed Conflict':        '#FF3B30',
+  'Terrorism & Security':  '#DC2626',
+  'Politics':              '#3B82F6',
+  'Diplomacy':             '#22C55E',
+  'Diplomacy & Sanctions': '#F59E0B',
+  'Humanitarian':          '#FF8A00',
+  'Economic & Trade':      '#A855F7',
+  'Other':                 '#94A3B8',
+};
+
+/**
+ * Ordered list of categories (mirrors backend CATEGORY_ORDER).
+ * Used by CategoryFilters to render in consistent order.
+ */
+export const CATEGORY_LIST = [
+  { id: 'all',                     label: 'All',                color: '#FFFFFF' },
+  { id: 'Armed Conflict',          label: 'Armed Conflict',     color: '#FF3B30' },
+  { id: 'Terrorism & Security',    label: 'Terror / Security',  color: '#DC2626' },
+  { id: 'Politics',                label: 'Politics',           color: '#3B82F6' },
+  { id: 'Diplomacy',               label: 'Diplomacy',          color: '#22C55E' },
+  { id: 'Diplomacy & Sanctions',   label: 'Sanctions',          color: '#F59E0B' },
+  { id: 'Humanitarian',            label: 'Humanitarian',       color: '#FF8A00' },
+  { id: 'Economic & Trade',        label: 'Economic',           color: '#A855F7' },
+  { id: 'Other',                   label: 'Other',              color: '#94A3B8' },
+];
+
+/**
+ * Fetch, flatten and normalise the backend payload so every component
+ * can keep working with the shape it already expects.
+ *
+ * Backend shape:
+ *   { success, count, data: { "Armed Conflict": [evt, …], … } }
+ *
+ * Each event looks like:
+ *   { id, type, country, coords:[lat,lng]|null, severity, confidence,
+ *     timestamp, title, description, sources:[{name,url}], score }
+ *
+ * We return:
+ *   { events: [...], markers: [...], stats: {...} }
+ */
+export const fetchGeopoliticsData = async () => {
+  const res = await axios.get(API_URL, { timeout: 15000 });
+  const { success, count, data } = res.data;
+
+  if (!success) {
+    throw new Error('API returned success=false');
+  }
+
+  const allEvents = [];
+  const byCategory = {};
+  const countries = new Set();
+
+  Object.entries(data).forEach(([category, categoryEvents]) => {
+    byCategory[category] = categoryEvents.length;
+
+    categoryEvents.forEach(evt => {
+      if (evt.country) countries.add(evt.country);
+
+      allEvents.push({
+        // pass through every original field
+        ...evt,
+        // --- normalised fields the UI already reads ---
+        category,
+        published_at: evt.timestamp,
+        intensity:    evt.severity,            // 1-5 scale used by markers
+        location:     evt.coords && evt.coords.length === 2
+                        ? { lat: evt.coords[0], lng: evt.coords[1] }
+                        : null,
+        // convenience: first source link / name for IntelPanel
+        source_url:   evt.sources?.[0]?.url  || null,
+        source_name:  evt.sources?.[0]?.name || null,
+      });
+    });
+  });
+
+  // Sort newest-first
+  allEvents.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+
+  return {
+    events:  allEvents,
+    markers: allEvents.filter(e => e.location !== null),
+    stats: {
+      total_events:     count || allEvents.length,
+      active_countries: countries.size,
+      by_category:      byCategory,
+      recent_count:     count || allEvents.length,
+    },
+  };
+};
