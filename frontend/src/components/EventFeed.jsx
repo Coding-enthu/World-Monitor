@@ -1,6 +1,6 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { MapPin, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, Clock, ChevronDown, ChevronUp, GripHorizontal } from 'lucide-react';
 import { CATEGORY_COLORS } from '../services/api';
 
 const formatTime = (dateStr) => {
@@ -21,27 +21,47 @@ const formatTime = (dateStr) => {
 };
 
 export default function EventFeed({ events, onEventClick, onCountryClick }) {
+  const [isMinimized, setIsMinimized] = useState(false);
   const recentEvents = events.slice(0, 8);
 
   return (
     <motion.div
+      drag
+      dragMomentum={false}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="fixed bottom-20 left-6 z-30 w-[340px] max-h-[320px] glass-panel rounded-xl overflow-hidden"
+      className="fixed bottom-20 left-6 z-30 w-[340px] glass-panel rounded-xl overflow-hidden cursor-move"
       data-testid="event-feed"
     >
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-[var(--border-default)] flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-[var(--text-secondary)]">
-          Live Intel Feed
-        </span>
-        <span className="text-[10px] font-mono text-[var(--text-muted)]">
-          {events.length} events
-        </span>
+      {/* Header / Drag Handle */}
+      <div 
+        className="px-4 py-3 border-b border-[var(--border-default)] flex items-center justify-between bg-[var(--bg-elevated)] hover:bg-[var(--border-default)] transition-colors cursor-pointer"
+        onClick={() => setIsMinimized(!isMinimized)}
+      >
+        <div className="flex items-center gap-2">
+          <GripHorizontal className="w-4 h-4 text-[var(--text-muted)]" />
+          <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-[var(--text-secondary)]">
+            Live Intel Feed
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] font-mono text-[var(--text-muted)]">
+            {events.length} events
+          </span>
+          {isMinimized ? <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" /> : <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />}
+        </div>
       </div>
 
       {/* Event List */}
-      <div className="overflow-y-auto max-h-[268px] scrollbar-thin">
+      <AnimatePresence>
+        {!isMinimized && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-y-auto max-h-[268px] scrollbar-thin cursor-auto"
+            onPointerDownCapture={(e) => e.stopPropagation()}
+          >
         {recentEvents.length === 0 ? (
           <div className="p-4 text-center text-sm text-[var(--text-muted)]">
             No events found
@@ -106,7 +126,9 @@ export default function EventFeed({ events, onEventClick, onCountryClick }) {
             );
           })
         )}
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

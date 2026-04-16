@@ -89,21 +89,20 @@ const WHITELIST = [
 
 // Non-geopolitical keywords (reject if ONLY these appear)
 const BLACKLIST = [
-	"stock market",
-	"celebrity",
-	"movie",
-	"film",
+	"celebrity gossip",
 	"box office",
 	"sports score",
 	"recipe",
-	"entertainment",
-	"fashion",
 	"reality tv",
 	"horoscope",
-	"lifestyle",
 	"dating",
 	"workout",
 	"diet",
+	"smartphone",
+	"gadget",
+	"gaming",
+	"app update",
+	"esports"
 ];
 
 // Normalize text safely
@@ -136,11 +135,11 @@ exports.preFilter = (articles = []) => {
 
 		const combinedText = `${title} ${description}`;
 
-		const hasWhitelist = containsKeyword(combinedText, WHITELIST);
+		const hasWhitelist = true; // Bypass whitelist to include all major news categories
 		const hasBlacklist = containsKeyword(combinedText, BLACKLIST);
 
 		// Final decision
-		return hasWhitelist && !hasBlacklist;
+		return !hasBlacklist;
 	});
 
 	logger.info(

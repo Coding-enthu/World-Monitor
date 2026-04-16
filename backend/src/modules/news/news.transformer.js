@@ -34,7 +34,18 @@ exports.transformEvents = (events = []) => {
 	const transformed = events
 		.map((e, i) => {
 			const country = normalizeCountry(e.country);
-			const coords = COORDS_MAP[country] || null;
+			
+			// 1. Prefer LLM's dynamic target-specific coordinates
+			// 2. Fallback to broad static country mapping
+			// 3. Handle nulls safely
+			let coords = e.coordinates;
+			if (!coords || !Array.isArray(coords) || coords.length !== 2) {
+				coords = COORDS_MAP[country];
+			}
+			if (!coords || !Array.isArray(coords) || coords.length !== 2) {
+				// Handle null/unmappable coordinates by giving generic default
+				coords = [0, 0]; 
+			}
 
 			return {
 				id: `evt_${Date.now()}_${i}`,

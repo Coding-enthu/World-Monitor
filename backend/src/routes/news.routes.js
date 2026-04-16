@@ -24,6 +24,10 @@ const CATEGORY_MAP = {
 	hostage: "Armed Conflict",
 
 	// Politics
+	policy: "Politics",
+	legislation: "Politics",
+	reform: "Politics",
+	law: "Politics",
 	election: "Politics",
 	coup: "Politics",
 	protest: "Politics",
