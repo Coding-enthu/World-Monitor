@@ -192,10 +192,10 @@ export default function Dashboard() {
 
         {/* Search */}
         <SearchBar onSearch={setSearchQuery} />
-      </div>
 
-      {/* Right: Finance Correlation */}
-      <FinanceCorrelation />
+        {/* Finance Correlation (moved inside flex so it doesn't overlap toggles) */}
+        <FinanceCorrelation />
+      </div>
 
       {/* Bottom Left: Event Feed */}
       <EventFeed events={filteredEvents} onEventClick={handleEventClick} onCountryClick={handleCountryClick} />
@@ -204,7 +204,14 @@ export default function Dashboard() {
       <TimelineSlider events={markers} onTimelineChange={setTimelineDate} activeDate={timelineDate} />
 
       {/* Panels */}
-      <IntelPanel event={selectedEvent} isOpen={isPanelOpen} onClose={() => setIsPanelOpen(false)} />
+      <IntelPanel 
+        event={selectedEvent} 
+        isOpen={isPanelOpen} 
+        onClose={() => {
+          setIsPanelOpen(false);
+          setSelectedEvent(null);
+        }} 
+      />
       <CountryIntelPanel country={selectedCountry} isOpen={isCountryPanelOpen} onClose={() => setIsCountryPanelOpen(false)} allEvents={events} />
       <EventGraph isOpen={isGraphOpen} onClose={() => setIsGraphOpen(false)} allEvents={events} />
       <SimulationPanel isOpen={isSimulationOpen} onClose={() => setIsSimulationOpen(false)} />

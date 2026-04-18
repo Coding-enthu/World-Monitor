@@ -51,35 +51,50 @@ const CATEGORY_MAP = {
 
 	// Terrorism & Security
 	assassination: "Terrorism & Security",
-	espionage: "Terrorism & Security",
-	cyberattack: "Terrorism & Security",
-	hacking: "Terrorism & Security",
-	surveillance: "Terrorism & Security",
 	operation: "Terrorism & Security",
 
-	// Humanitarian
-	crisis: "Humanitarian",
-	humanitarian: "Humanitarian",
-	refugee: "Humanitarian",
-	displacement: "Humanitarian",
-	famine: "Humanitarian",
-	evacuation: "Humanitarian",
+	// Cyber & Tech
+	espionage: "Cyber & Tech",
+	cyberattack: "Cyber & Tech",
+	hacking: "Cyber & Tech",
+	surveillance: "Cyber & Tech",
 
-	// Economic & Trade
-	tradewar: "Economic & Trade",
-	tariff: "Economic & Trade",
-	armsdeal: "Economic & Trade",
+	// Environment & Climate
+	environment: "Environment & Climate",
+	earthquake: "Environment & Climate",
+	weather: "Environment & Climate",
+
+	// Health & Disaster
+	pandemic: "Health & Disaster",
+	disaster: "Health & Disaster",
+	crisis: "Health & Disaster",
+	humanitarian: "Health & Disaster",
+	refugee: "Health & Disaster",
+	displacement: "Health & Disaster",
+	famine: "Health & Disaster",
+	evacuation: "Health & Disaster",
+	"mass-death": "Health & Disaster",
+
+	// Global Economy
+	tradewar: "Global Economy",
+	tariff: "Global Economy",
+	armsdeal: "Global Economy",
+	economy: "Global Economy",
+	business: "Global Economy",
+	market: "Global Economy",
 };
 
 // Fallback category ordering for display
 const CATEGORY_ORDER = [
 	"Armed Conflict",
 	"Terrorism & Security",
+	"Cyber & Tech",
 	"Politics",
 	"Diplomacy",
 	"Diplomacy & Sanctions",
-	"Humanitarian",
-	"Economic & Trade",
+	"Global Economy",
+	"Health & Disaster",
+	"Environment & Climate",
 	"Other",
 ];
 

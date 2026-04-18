@@ -38,16 +38,26 @@ let webpackConfig = {
     },
     configure: (webpackConfig) => {
 
+      // Disable Webpack 5's strict fullySpecified requirement for .mjs files,
+      // which causes libraries like react-globe.gl to abort parsing and
+      // incorrectly report having no exports.
+      webpackConfig.module.rules.push({
+        test: /\.m?js/,
+        resolve: {
+          fullySpecified: false
+        }
+      });
+
       // Add ignored patterns to reduce watched directories
-        webpackConfig.watchOptions = {
-          ...webpackConfig.watchOptions,
-          ignored: [
-            '**/node_modules/**',
-            '**/.git/**',
-            '**/build/**',
-            '**/dist/**',
-            '**/coverage/**',
-            '**/public/**',
+      webpackConfig.watchOptions = {
+        ...webpackConfig.watchOptions,
+        ignored: [
+          '**/node_modules/**',
+          '**/.git/**',
+          '**/build/**',
+          '**/dist/**',
+          '**/coverage/**',
+          '**/public/**',
         ],
       };
 

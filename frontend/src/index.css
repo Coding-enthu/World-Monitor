@@ -17,10 +17,14 @@
     --text-secondary: #94A3B8;
     --text-muted: #475569;
     --cat-war: #FF3B30;
+    --cat-security: #DC2626;
+    --cat-cyber: #10B981;
     --cat-political: #3B82F6;
-    --cat-economic: #F59E0B;
-    --cat-policy: #22C55E;
-    --cat-disaster: #FF8A00;
+    --cat-diplomacy: #22C55E;
+    --cat-sanctions: #F59E0B;
+    --cat-economic: #A855F7;
+    --cat-health: #EC4899;
+    --cat-environment: #14B8A6;
     --cat-all: #FFFFFF;
     --radius: 0.5rem;
     --background: 220 20% 4%;

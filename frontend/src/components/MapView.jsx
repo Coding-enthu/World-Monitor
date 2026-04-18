@@ -67,7 +67,17 @@ const EventMarkers = ({ events, onEventClick, onCountryClick }) => {
       if (!event.location || typeof event.location.lat !== 'number' || typeof event.location.lng !== 'number') return;
 
       const icon = createMarkerIcon(event.category, event.intensity);
-      const marker = L.marker([event.location.lat, event.location.lng], { icon });
+      
+      const hash = event.id ? event.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0) : 0;
+      const isDefault = event.location.lat === 0 && event.location.lng === 0;
+      const spread = isDefault ? 12.0 : 1.2;
+      const offsetLat = (((hash * 7) % 100) / 100 - 0.5) * spread;
+      const offsetLng = (((hash * 13) % 100) / 100 - 0.5) * spread;
+
+      const markerLat = event.location.lat + offsetLat;
+      const markerLng = event.location.lng + offsetLng;
+
+      const marker = L.marker([markerLat, markerLng], { icon });
       
       marker.on('click', () => handleMarkerClick(event));
       

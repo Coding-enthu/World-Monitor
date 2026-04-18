@@ -9,7 +9,7 @@ const { transformEvents } = require("../modules/news/news.transformer");
 const { deduplicateEvents } = require("../modules/news/news.deduplicator");
 const { scoreEvents } = require("../modules/news/news.scorer");
 
-const { setCache } = require("../cache/cache.service");
+const { mergeAndSetCache } = require("../cache/cache.service");
 
 exports.runNewsPipeline = async () => {
   logger.info("Running scheduled news pipeline...", "job");
@@ -22,7 +22,7 @@ exports.runNewsPipeline = async () => {
     const deduped = deduplicateEvents(transformed);
     const scored = scoreEvents(deduped);
 
-    await setCache(scored);
+    await mergeAndSetCache(scored);
 
     logger.info("News pipeline completed successfully", "job");
   } catch (err) {

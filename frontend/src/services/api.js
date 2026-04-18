@@ -10,11 +10,13 @@ const API_URL = 'http://localhost:5000/api/geopolitics';
 export const CATEGORY_COLORS = {
   'Armed Conflict':        '#FF3B30',
   'Terrorism & Security':  '#DC2626',
+  'Cyber & Tech':          '#10B981',
   'Politics':              '#3B82F6',
   'Diplomacy':             '#22C55E',
   'Diplomacy & Sanctions': '#F59E0B',
-  'Humanitarian':          '#FF8A00',
-  'Economic & Trade':      '#A855F7',
+  'Global Economy':        '#A855F7',
+  'Health & Disaster':     '#EC4899',
+  'Environment & Climate': '#14B8A6',
   'Other':                 '#94A3B8',
 };
 
@@ -26,11 +28,13 @@ export const CATEGORY_LIST = [
   { id: 'all',                     label: 'All',                color: '#FFFFFF' },
   { id: 'Armed Conflict',          label: 'Armed Conflict',     color: '#FF3B30' },
   { id: 'Terrorism & Security',    label: 'Terror / Security',  color: '#DC2626' },
+  { id: 'Cyber & Tech',            label: 'Cyber & Tech',       color: '#10B981' },
   { id: 'Politics',                label: 'Politics',           color: '#3B82F6' },
   { id: 'Diplomacy',               label: 'Diplomacy',          color: '#22C55E' },
   { id: 'Diplomacy & Sanctions',   label: 'Sanctions',          color: '#F59E0B' },
-  { id: 'Humanitarian',            label: 'Humanitarian',       color: '#FF8A00' },
-  { id: 'Economic & Trade',        label: 'Economic',           color: '#A855F7' },
+  { id: 'Global Economy',          label: 'Global Economy',     color: '#A855F7' },
+  { id: 'Health & Disaster',       label: 'Health & Disaster',  color: '#EC4899' },
+  { id: 'Environment & Climate',   label: 'Climate / Env',      color: '#14B8A6' },
   { id: 'Other',                   label: 'Other',              color: '#94A3B8' },
 ];
 
