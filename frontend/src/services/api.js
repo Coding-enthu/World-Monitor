@@ -52,8 +52,19 @@ export const CATEGORY_LIST = [
  * We return:
  *   { events: [...], markers: [...], stats: {...} }
  */
-export const fetchGeopoliticsData = async () => {
-  const res = await axios.get(API_URL, { timeout: 15000 });
+export const fetchAvailableDates = async () => {
+  try {
+    const res = await axios.get(`${API_URL}/dates`, { timeout: 10000 });
+    return res.data.dates || [];
+  } catch (err) {
+    console.error("Failed to fetch available dates:", err);
+    return [];
+  }
+};
+
+export const fetchGeopoliticsData = async (date = null) => {
+  const endpoint = date ? `${API_URL}?date=${date}` : API_URL;
+  const res = await axios.get(endpoint, { timeout: 15000 });
   const { success, count, data } = res.data;
 
   if (!success) {

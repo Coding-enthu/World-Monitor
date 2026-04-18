@@ -2,21 +2,7 @@ const redis = require("../config/redis.js");
 const logger = require("../utils/logger.js");
 const stringSimilarity = require("string-similarity");
 
-const MAIN_KEY  = "geopolitics_events";
-const BACKUP_KEY = "geopolitics_events_backup";
-
-// Main cache lives until midnight of the current day.
-// We compute seconds remaining until 00:00 local time.
-const secondsUntilMidnight = () => {
-  const now = new Date();
-  const midnight = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate() + 1, // next calendar day
-    0, 0, 0, 0
-  );
-  return Math.max(Math.floor((midnight - now) / 1000), 1);
-};
+const ARCHIVE_INDEX = "geopolitics_archive_dates";
 
 // Returns today's date as "YYYY-MM-DD" in local time.
 const todayString = () => {
@@ -27,14 +13,16 @@ const todayString = () => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
+// Compute dynamic key
+const getDailyKey = (dateStr) => `geopolitics_events:${dateStr}`;
+
 // ---------- INTERNAL: read raw envelope { date, events } ----------
 const _readEnvelope = async (key) => {
   const raw = await redis.get(key);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    // Support both old format (bare array) and new format ({ date, events })
-    if (Array.isArray(parsed)) return { date: todayString(), events: parsed };
+    if (Array.isArray(parsed)) return { date: key.split(':')[1] || todayString(), events: parsed };
     if (parsed && Array.isArray(parsed.events)) return parsed;
     return null;
   } catch {
@@ -43,8 +31,6 @@ const _readEnvelope = async (key) => {
 };
 
 // ---------- INTERNAL: deduplicate across two event lists ----------
-// Uses the same criteria as news.deduplicator but with a wider time window
-// (up to 24 h) so cross-run duplicates within the same day are caught.
 const _isSameEvent = (a, b) => {
   if (!a.title || !b.title) return false;
 
@@ -59,17 +45,15 @@ const _isSameEvent = (a, b) => {
     b.title.toLowerCase()
   );
 
-  // Same country + type + within 24 h + title similarity > 0.3
-  return sameCountry && sameType && timeDiff < 24 && similarity > 0.3;
+  return sameCountry && sameType && timeDiff < 24 && similarity > 0.7;
 };
 
 const _mergeDedup = (existing, incoming) => {
-  const merged = existing.map(e => ({ ...e })); // shallow-clone existing
+  const merged = existing.map(e => ({ ...e }));
 
   for (const evt of incoming) {
     const match = merged.find(m => _isSameEvent(m, evt));
     if (match) {
-      // Merge sources (deduplicate by URL)
       const existingUrls = new Set((match.sources || []).map(s => s.url));
       for (const src of (evt.sources || [])) {
         if (!existingUrls.has(src.url)) {
@@ -77,10 +61,8 @@ const _mergeDedup = (existing, incoming) => {
           existingUrls.add(src.url);
         }
       }
-      // Keep higher severity & average confidence
       match.severity   = Math.max(match.severity, evt.severity);
       match.confidence = (match.confidence + evt.confidence) / 2;
-      // Re-score inline so the score stays consistent after merge
     } else {
       merged.push({ ...evt });
     }
@@ -89,49 +71,61 @@ const _mergeDedup = (existing, incoming) => {
   return merged;
 };
 
-// ---------- INTERNAL: write envelope to both keys ----------
+// ---------- INTERNAL: write envelope to target date key & index ----------
 const _writeEnvelope = async (envelope) => {
+  const dateStr = envelope.date || todayString();
+  const key = getDailyKey(dateStr);
   const json = JSON.stringify(envelope);
-  const ttl  = secondsUntilMidnight();
 
-  // Main key: expires at midnight
-  await redis.set(MAIN_KEY, json, "EX", ttl);
-
-  // Backup key: no expiry (serves as cold-start fallback)
-  await redis.set(BACKUP_KEY, json);
+  // Instead of deleting at midnight, we persist it. (Could add EX 30 days if desired later)
+  await redis.set(key, json);
+  await redis.sadd(ARCHIVE_INDEX, dateStr);
 
   logger.info(
-    `Cache written — ${envelope.events.length} events, TTL ${ttl}s (expires at midnight)`,
+    `Cache written mapped to date: ${dateStr} — ${envelope.events.length} events archived`,
     "cache"
   );
 };
 
-// ---------- PUBLIC: get (returns bare event array for backward compat) ----------
-exports.getCache = async () => {
+// ---------- PUBLIC: list all archived dates ----------
+exports.getAvailableDates = async () => {
   try {
-    logger.info("Checking Redis cache...", "cache");
+    const dates = await redis.smembers(ARCHIVE_INDEX);
+    if (!dates || dates.length === 0) return [todayString()];
+    return dates.sort(); // ascending order e.g ["2026-04-18", "2026-04-19"]
+  } catch (err) {
+    logger.error(`Redis SMEMBERS error: ${err.message}`, "cache");
+    return [todayString()];
+  }
+};
 
-    let envelope = await _readEnvelope(MAIN_KEY);
+// ---------- PUBLIC: get (accept optional specific YYYY-MM-DD parameter) ----------
+exports.getCache = async (targetDate) => {
+  try {
+    const dateStr = targetDate || todayString();
+    const key = getDailyKey(dateStr);
+    
+    logger.info(`Checking Redis cache for target date: ${dateStr}...`, "cache");
+
+    let envelope = await _readEnvelope(key);
+    
     if (envelope) {
-      // Discard if it somehow survived past midnight
-      if (envelope.date === todayString()) {
-        logger.info(`Cache hit (main) — ${envelope.events.length} events`, "cache");
-        return envelope.events;
-      }
-      logger.warn("Stale main cache (different day) — discarding", "cache");
+      logger.info(`Cache hit (${dateStr}) — ${envelope.events.length} events`, "cache");
+      return envelope.events;
     }
 
-    logger.warn("Main cache miss, checking backup...", "cache");
-    envelope = await _readEnvelope(BACKUP_KEY);
-    if (envelope) {
-      if (envelope.date === todayString()) {
-        logger.warn(`Serving backup cache — ${envelope.events.length} events`, "cache");
-        return envelope.events;
+    // Attempt cold-start fallback (try finding ANY data if strictly looking for today)
+    if (!targetDate || targetDate === todayString()) {
+      logger.warn(`No DB records exactly matching ${dateStr}. Searching fallback index.`, "cache");
+      const availableDates = await exports.getAvailableDates();
+      if (availableDates.length > 0) {
+        const fallbackKey = getDailyKey(availableDates[availableDates.length - 1]);
+        const fallbackEnvelope = await _readEnvelope(fallbackKey);
+        if (fallbackEnvelope && fallbackEnvelope.events) return fallbackEnvelope.events;
       }
-      logger.warn("Stale backup cache (different day) — discarding", "cache");
     }
 
-    logger.warn("No valid cache available", "cache");
+    logger.warn(`No valid cache available for date ${dateStr}`, "cache");
     return null;
   } catch (err) {
     logger.error(`Redis GET error: ${err.message}`, "cache");
@@ -149,21 +143,21 @@ exports.mergeAndSetCache = async (newEvents = []) => {
 
     const today = todayString();
 
-    // Read what is already cached
+    // Read what is already cached for today
     let existingEvents = [];
-    const envelope = await _readEnvelope(MAIN_KEY)
-                  || await _readEnvelope(BACKUP_KEY);
+    const todayKey = getDailyKey(today);
+    const envelope = await _readEnvelope(todayKey);
 
     if (envelope && envelope.date === today) {
       // Same day — accumulate
-      existingEvents = envelope.events;
+      existingEvents = envelope.events || [];
       logger.info(
         `Merging with ${existingEvents.length} existing events from today`,
         "cache"
       );
     } else if (envelope) {
-      // Different day — reset
-      logger.info("New day detected — resetting accumulated events", "cache");
+      // Different day — should not happen with dynamic keys, but just in case
+      logger.info("New day detected — starting fresh accumulation", "cache");
     }
 
     // Merge + deduplicate

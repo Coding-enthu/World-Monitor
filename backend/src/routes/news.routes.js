@@ -58,6 +58,7 @@ const CATEGORY_MAP = {
 	cyberattack: "Cyber & Tech",
 	hacking: "Cyber & Tech",
 	surveillance: "Cyber & Tech",
+	technology: "Cyber & Tech",
 
 	// Environment & Climate
 	environment: "Environment & Climate",
@@ -69,11 +70,13 @@ const CATEGORY_MAP = {
 	disaster: "Health & Disaster",
 	crisis: "Health & Disaster",
 	humanitarian: "Health & Disaster",
+	humanitariancrisis: "Health & Disaster",
 	refugee: "Health & Disaster",
 	displacement: "Health & Disaster",
 	famine: "Health & Disaster",
 	evacuation: "Health & Disaster",
 	"mass-death": "Health & Disaster",
+	health: "Health & Disaster",
 
 	// Global Economy
 	tradewar: "Global Economy",
@@ -82,6 +85,17 @@ const CATEGORY_MAP = {
 	economy: "Global Economy",
 	business: "Global Economy",
 	market: "Global Economy",
+
+	// Catch-alls that fit specific buckets
+	politics: "Politics",
+	terrorism: "Terrorism & Security",
+	crime: "Terrorism & Security",
+	lawenforcement: "Terrorism & Security",
+	social: "Politics",
+	media: "Politics",
+	culture: "Other",
+	death: "Health & Disaster",
+	policychange: "Politics",
 };
 
 // Fallback category ordering for display
@@ -123,14 +137,32 @@ const categorizeEvents = (events) => {
 	return result;
 };
 
+// GET /api/geopolitics/dates
+router.get("/geopolitics/dates", async (req, res) => {
+	try {
+		logger.info("GET /api/geopolitics/dates", "routes");
+		const { getAvailableDates } = require("../cache/cache.service");
+		const dates = await getAvailableDates();
+		
+		res.status(200).json({
+			success: true,
+			dates,
+		});
+	} catch (err) {
+		logger.error(`Date Route error: ${err.message}`, "routes");
+		res.status(500).json({ success: false, error: "Internal Server Error" });
+	}
+});
+
 // GET /api/geopolitics
 router.get("/geopolitics", async (req, res) => {
 	const start = Date.now();
 
 	try {
-		logger.info("GET /api/geopolitics", "routes");
+		const targetDate = req.query.date;
+		logger.info(`GET /api/geopolitics${targetDate ? `?date=${targetDate}` : ''}`, "routes");
 
-		const events = await getGeopoliticalEvents();
+		const events = await getGeopoliticalEvents(targetDate);
 		const data = categorizeEvents(events);
 
 		const duration = Date.now() - start;

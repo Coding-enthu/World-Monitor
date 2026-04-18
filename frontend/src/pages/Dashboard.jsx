@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, lazy, Suspense } from 'react';
-import { fetchGeopoliticsData } from '../services/api';
+import { fetchGeopoliticsData, fetchAvailableDates } from '../services/api';
 import MapView from '../components/MapView';
 import GlobalCounters from '../components/GlobalCounters';
 import CategoryFilters from '../components/CategoryFilters';
@@ -30,6 +30,7 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [timelineDate, setTimelineDate] = useState(null);
+  const [availableDates, setAvailableDates] = useState([]);
   const [viewMode, setViewMode] = useState('2d');
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [isCountryPanelOpen, setIsCountryPanelOpen] = useState(false);
@@ -39,45 +40,65 @@ export default function Dashboard() {
 
   // WebSocket
   const handleNewEvent = useCallback((eventData) => {
-    if (eventData) {
+    // Only append real-time web-socket events if we are viewing today's default board (timelineDate is null)
+    if (eventData && !timelineDate) {
       setNewEventToast(eventData);
       setMarkers(prev => {
         if (prev.some(m => m.id === eventData.id)) return prev;
         return [eventData, ...prev];
       });
     }
-  }, []);
+  }, [timelineDate]);
 
   const handleStatsUpdate = useCallback((statsData) => {
-    if (statsData?.total_events) {
+    if (statsData?.total_events && !timelineDate) {
       setStats(prev => ({ ...prev, total_events: statsData.total_events }));
     }
-  }, []);
+  }, [timelineDate]);
 
   const { isConnected } = useWebSocket({ onNewEvent: handleNewEvent, onStatsUpdate: handleStatsUpdate });
 
   // Data fetching
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (targetDate = null) => {
     try {
-      const data = await fetchGeopoliticsData();
+      const data = await fetchGeopoliticsData(targetDate);
       setMarkers(data.markers);
       setEvents(data.events);
       setStats(data.stats);
     } catch (e) { console.error('Fetch error:', e); }
   }, []);
 
+  // Initialization
   useEffect(() => {
     const init = async () => {
-      try { await fetchData(); }
+      try { 
+        const dates = await fetchAvailableDates();
+        setAvailableDates(dates);
+        await fetchData(); 
+      }
       catch (e) { console.error('Init error:', e); }
       setLoading(false);
     };
     init();
-    const interval = setInterval(() => { fetchData(); }, 30000);
-    return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Filtering
+  // Handle timeline shifts
+  useEffect(() => {
+    // Re-fetch data whenever the user commits to a new timeline date
+    if (!loading) {
+      fetchData(timelineDate);
+    }
+  }, [timelineDate, fetchData, loading]);
+
+  // Background Polling (Only if viewing today)
+  useEffect(() => {
+    const interval = setInterval(() => { 
+      if (!timelineDate) fetchData(); 
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [fetchData, timelineDate]);
+
+  // Filtering (No timeline filtering needed, API serves exact day dataset)
   const filteredMarkers = useMemo(() => {
     let result = markers;
     if (activeCategory !== 'all') result = result.filter(e => e.category === activeCategory);
@@ -85,12 +106,8 @@ export default function Dashboard() {
       const q = searchQuery.toLowerCase();
       result = result.filter(e => e.title.toLowerCase().includes(q) || e.country.toLowerCase().includes(q));
     }
-    if (timelineDate) {
-      const td = new Date(timelineDate);
-      result = result.filter(e => new Date(e.published_at).toDateString() === td.toDateString());
-    }
     return result;
-  }, [markers, activeCategory, searchQuery, timelineDate]);
+  }, [markers, activeCategory, searchQuery]);
 
   const filteredEvents = useMemo(() => {
     let result = events;
@@ -99,12 +116,8 @@ export default function Dashboard() {
       const q = searchQuery.toLowerCase();
       result = result.filter(e => e.title.toLowerCase().includes(q) || e.description.toLowerCase().includes(q) || e.country.toLowerCase().includes(q));
     }
-    if (timelineDate) {
-      const td = new Date(timelineDate);
-      result = result.filter(e => new Date(e.published_at).toDateString() === td.toDateString());
-    }
     return result;
-  }, [events, activeCategory, searchQuery, timelineDate]);
+  }, [events, activeCategory, searchQuery]);
 
   // Handlers
   const handleEventClick = useCallback((event) => {
@@ -201,7 +214,7 @@ export default function Dashboard() {
       <EventFeed events={filteredEvents} onEventClick={handleEventClick} onCountryClick={handleCountryClick} />
 
       {/* Bottom Center: Timeline */}
-      <TimelineSlider events={markers} onTimelineChange={setTimelineDate} activeDate={timelineDate} />
+      <TimelineSlider availableDates={availableDates} events={markers} onTimelineChange={setTimelineDate} activeDate={timelineDate} />
 
       {/* Panels */}
       <IntelPanel 

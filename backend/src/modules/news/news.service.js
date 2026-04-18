@@ -1,10 +1,10 @@
 const logger = require("../../utils/logger");
 const { getCache } = require("../../cache/cache.service");
 
-exports.getGeopoliticalEvents = async () => {
-	logger.info("Request received: geopolitics", "news.service");
+exports.getGeopoliticalEvents = async (targetDate) => {
+	logger.info(`Request received: geopolitics${targetDate ? ` (Date: ${targetDate})` : ''}`, "news.service");
 
-	const cached = await getCache();
+	const cached = await getCache(targetDate);
 
 	if (cached) {
 		logger.info("Returning cached data", "news.service");

@@ -18,7 +18,7 @@ const server = app.listen(PORT, () => {
 })();
 
 // ---------- CRON JOB (EVERY 30 MIN) ----------
-cron.schedule("*/30 * * * *", async () => {
+cron.schedule("*/5 * * * *", async () => {
 	logger.info("Cron triggered", "cron");
 	await runNewsPipeline();
 });

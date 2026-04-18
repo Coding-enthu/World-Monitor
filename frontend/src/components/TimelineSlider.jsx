@@ -1,34 +1,18 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, RotateCcw } from 'lucide-react';
 
-export default function TimelineSlider({ events, onTimelineChange, activeDate }) {
+export default function TimelineSlider({ availableDates = [], onTimelineChange, activeDate }) {
   const [hoveredDate, setHoveredDate] = useState(null);
 
-  // Get unique dates from events
-  const dateRange = useMemo(() => {
-    if (!events.length) return { dates: [], min: null, max: null };
-    
-    const dates = new Set();
-    events.forEach(e => {
-      try {
-        const d = new Date(e.published_at);
-        dates.add(d.toISOString().split('T')[0]);
-      } catch {}
-    });
-    
-    const sortedDates = Array.from(dates).sort();
-    return {
-      dates: sortedDates,
-      min: sortedDates[0],
-      max: sortedDates[sortedDates.length - 1]
-    };
-  }, [events]);
+  const dates = availableDates.length ? [...availableDates].sort() : [];
+  const minDate = dates.length ? dates[0] : null;
+  const maxDate = dates.length ? dates[dates.length - 1] : null;
 
   const handleSliderChange = (e) => {
     const idx = parseInt(e.target.value);
-    if (idx >= 0 && idx < dateRange.dates.length) {
-      const date = dateRange.dates[idx];
+    if (idx >= 0 && idx < dates.length) {
+      const date = dates[idx];
       onTimelineChange(date);
       setHoveredDate(date);
     }
@@ -43,15 +27,17 @@ export default function TimelineSlider({ events, onTimelineChange, activeDate })
     if (!dateStr) return '';
     try {
       const d = new Date(dateStr);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      // Make it strict local date parsing so it doesn't shift by timezone
+      const localDate = new Date(d.getTime() + Math.abs(d.getTimezoneOffset() * 60000));
+      return localDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     } catch {
       return dateStr;
     }
   };
 
-  const currentIdx = activeDate ? dateRange.dates.indexOf(activeDate) : dateRange.dates.length - 1;
+  const currentIdx = activeDate ? dates.indexOf(activeDate) : dates.length - 1;
 
-  if (dateRange.dates.length < 2) return null;
+  if (dates.length < 2) return null;
 
   return (
     <motion.div
@@ -79,7 +65,7 @@ export default function TimelineSlider({ events, onTimelineChange, activeDate })
             </button>
           )}
           <span className="text-sm font-mono font-medium text-white" data-testid="timeline-active-date">
-            {formatDate(hoveredDate || activeDate || dateRange.max)}
+            {formatDate(hoveredDate || activeDate || maxDate)}
           </span>
         </div>
       </div>
@@ -89,15 +75,15 @@ export default function TimelineSlider({ events, onTimelineChange, activeDate })
         <input
           type="range"
           min={0}
-          max={dateRange.dates.length - 1}
-          value={currentIdx >= 0 ? currentIdx : dateRange.dates.length - 1}
+          max={dates.length - 1}
+          value={currentIdx >= 0 ? currentIdx : dates.length - 1}
           onChange={handleSliderChange}
           className="timeline-range w-full"
           data-testid="timeline-range-input"
         />
         <div className="flex justify-between mt-1">
-          <span className="text-[10px] font-mono text-[var(--text-muted)]">{formatDate(dateRange.min)}</span>
-          <span className="text-[10px] font-mono text-[var(--text-muted)]">{formatDate(dateRange.max)}</span>
+          <span className="text-[10px] font-mono text-[var(--text-muted)]">{formatDate(minDate)}</span>
+          <span className="text-[10px] font-mono text-[var(--text-muted)]">{formatDate(maxDate)}</span>
         </div>
       </div>
     </motion.div>
