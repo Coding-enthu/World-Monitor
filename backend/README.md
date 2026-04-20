@@ -21,6 +21,20 @@ npm run docker:build
 npm run docker:run
 ```
 
+### Full-stack activation scripts (repo root)
+
+From `World-Monitor/`:
+
+```bash
+# macOS / Linux
+./activation.sh
+```
+
+```powershell
+# Windows PowerShell
+.\activation.ps1
+```
+
 ---
 
 ## Environment Variables
