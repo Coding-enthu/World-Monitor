@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Loader2, Zap, TrendingUp, TrendingDown, Minus, AlertTriangle, Clock, Globe } from 'lucide-react';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
 /**
- * SimulationPanel — Demo stub.
- * The current backend has no /api/simulate endpoint.
- * Renders a canned demo result instead of calling a non-existent API.
+ * SimulationPanel — AI-powered geopolitical scenario simulator.
+ * Calls /api/simulate with multi-provider LLM failover (Groq → Gemini).
  */
 
 const SEVERITY_COLORS = ['#22C55E', '#22C55E', '#84CC16', '#F59E0B', '#F59E0B', '#FF8A00', '#FF8A00', '#FF3B30', '#FF3B30', '#DC2626', '#DC2626'];
@@ -19,38 +21,34 @@ const presets = [
   "If the US-China trade war escalates with full tariffs, what happens?",
 ];
 
-const DEMO_RESULT = {
-  summary: "This is a demo simulation. Connect a simulation API to enable AI-powered geopolitical forecasting. The panel will display probability estimates, severity assessments, chain reactions, market impacts, and affected regions.",
-  probability: 0.65,
-  severity: 7,
-  timeline: "1-3 months",
-  chain_reactions: [
-    { step: 1, event: "Initial geopolitical trigger detected", category: "conflict", delay: "immediate" },
-    { step: 2, event: "Regional economic disruption begins", category: "economic", delay: "1-2 weeks" },
-    { step: 3, event: "International diplomatic response", category: "diplomacy", delay: "2-4 weeks" },
-  ],
-  market_impact: { oil: 'up', gold: 'up', stocks: 'down', description: 'Markets react to geopolitical uncertainty with flight to safety assets.' },
-  affected_regions: [
-    { region: "Middle East", impact: "high", description: "Direct impact zone" },
-    { region: "Europe", impact: "medium", description: "Energy supply disruption" },
-  ],
-};
-
 export default function SimulationPanel({ isOpen, onClose }) {
   const [scenario, setScenario] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [provider, setProvider] = useState(null);
+  const [error, setError] = useState(null);
 
   const runSimulation = async (text) => {
     const input = text || scenario;
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
     setLoading(true);
     setResult(null);
-    // Demo: show canned result after a short delay
-    setTimeout(() => {
-      setResult(DEMO_RESULT);
+    setError(null);
+    setProvider(null);
+
+    try {
+      const res = await axios.post(`${BACKEND_URL}/api/simulate`, {
+        scenario: input,
+      }, { timeout: 45000 });
+
+      setResult(res.data.simulation);
+      setProvider(res.data.provider);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Unknown error';
+      setError(`Simulation failed: ${msg}`);
+    } finally {
       setLoading(false);
-    }, 1200);
+    }
   };
 
   return (
@@ -68,7 +66,7 @@ export default function SimulationPanel({ isOpen, onClose }) {
             <div className="flex items-center gap-3">
               <Zap className="w-5 h-5 text-[var(--cat-economic)]" />
               <h2 className="text-lg font-bold tracking-tight" style={{ fontFamily: 'Chivo' }}>Predictive Simulation</h2>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[var(--cat-economic)]/20 text-[var(--cat-economic)]">Demo</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[var(--cat-economic)]/20 text-[var(--cat-economic)]">AI</span>
             </div>
             <button onClick={onClose} className="p-2 glass-light rounded-md hover:bg-[var(--bg-elevated)]" data-testid="simulation-close-btn">
               <X className="w-5 h-5" />
@@ -122,11 +120,23 @@ export default function SimulationPanel({ isOpen, onClose }) {
               </div>
             )}
 
+            {error && (
+              <div className="glass-light rounded-lg p-4 border border-red-500/30">
+                <div className="flex items-center gap-2 text-red-400 text-sm">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>{error}</span>
+                </div>
+              </div>
+            )}
+
             {result && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                 {/* Summary */}
                 <div className="glass-light rounded-lg p-5">
                   <p className="text-sm leading-relaxed" data-testid="simulation-summary">{result.summary}</p>
+                  {provider && (
+                    <p className="text-[9px] font-mono text-[var(--text-muted)] mt-2 opacity-60">Analysis by {provider}</p>
+                  )}
                 </div>
 
                 {/* Metrics Row */}

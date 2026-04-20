@@ -9,7 +9,7 @@ const requiredEnv = [
 
 requiredEnv.forEach((key) => {
 	if (!process.env[key]) {
-		console.error(`❌ Missing required env variable: ${key}`);
+		console.error(`Missing required env variable: ${key}`);
 		process.exit(1);
 	}
 });
@@ -19,7 +19,6 @@ module.exports = {
 	NEWS_API_KEY: process.env.NEWS_API_KEY,
 
 	LLM: {
-		URL: process.env.LLM_URL,
 		MODEL: process.env.LLM_MODEL,
 		TIMEOUT: process.env.LLM_TIMEOUT || 30000,
 	},

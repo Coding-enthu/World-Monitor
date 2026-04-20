@@ -2,11 +2,11 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import Globe from 'react-globe.gl';
 import { CATEGORY_COLORS } from '../services/api';
 
-export default function GlobeView({ events, onEventClick, selectedEvent }) {
-  const globeRef   = useRef();
+export default function GlobeView({ events, weatherMarkers = [], onEventClick, selectedEvent }) {
+  const globeRef = useRef();
   const containerRef = useRef();
   const [dimensions, setDimensions] = useState({
-    width:  window.innerWidth,
+    width: window.innerWidth,
     height: window.innerHeight,
   });
 
@@ -55,15 +55,15 @@ export default function GlobeView({ events, onEventClick, selectedEvent }) {
       globeRef.current
     ) {
       globeRef.current.pointOfView({
-        lat:      selectedEvent.location.lat,
-        lng:      selectedEvent.location.lng,
+        lat: selectedEvent.location.lat,
+        lng: selectedEvent.location.lng,
         altitude: 0.8,
       }, 1000);
     }
   }, [selectedEvent]);
 
   const pointsData = useMemo(() => {
-    return events
+    const eventPoints = events
       .filter(
         e =>
           e.location &&
@@ -81,15 +81,30 @@ export default function GlobeView({ events, onEventClick, selectedEvent }) {
         const offsetLng = (((hash * 13) % 100) / 100 - 0.5) * spread;
 
         return {
-          lat:   e.location.lat + offsetLat,
-          lng:   e.location.lng + offsetLng,
-          size:  Math.max(0.15, (e.intensity || 5) * 0.06),
+          lat: e.location.lat + offsetLat,
+          lng: e.location.lng + offsetLng,
+          size: Math.max(0.15, (e.intensity || 5) * 0.06),
           color: CATEGORY_COLORS[e.category] || '#3B82F6',
           label: e.title,
-          event: e,
+          kind: 'event',
+          payload: e,
         };
       });
-  }, [events]);
+
+    const weatherPoints = weatherMarkers
+      .filter((marker) => typeof marker.latitude === 'number' && typeof marker.longitude === 'number')
+      .map((marker) => ({
+        lat: marker.latitude,
+        lng: marker.longitude,
+        size: 0.25,
+        color: '#14B8A6',
+        label: `${marker.name}, ${marker.country}`,
+        kind: 'weather',
+        payload: marker,
+      }));
+
+    return [...eventPoints, ...weatherPoints];
+  }, [events, weatherMarkers]);
 
   const ringsData = useMemo(() => {
     return events
@@ -101,18 +116,18 @@ export default function GlobeView({ events, onEventClick, selectedEvent }) {
           (e.intensity || 0) >= 4
       )
       .map(e => ({
-        lat:              e.location.lat,
-        lng:              e.location.lng,
-        maxR:             3,
+        lat: e.location.lat,
+        lng: e.location.lng,
+        maxR: 3,
         propagationSpeed: 2,
-        repeatPeriod:     1200,
-        color:            () => CATEGORY_COLORS[e.category] || '#3B82F6',
+        repeatPeriod: 1200,
+        color: () => CATEGORY_COLORS[e.category] || '#3B82F6',
       }));
   }, [events]);
 
   const handlePointClick = useCallback((point) => {
-    if (point && point.event && onEventClick) {
-      onEventClick(point.event);
+    if (point && point.kind === 'event' && point.payload && onEventClick) {
+      onEventClick(point.payload);
     }
   }, [onEventClick]);
 
@@ -148,9 +163,16 @@ export default function GlobeView({ events, onEventClick, selectedEvent }) {
         onPointHover={handlePointHover}
         pointLabel={(d) => `
           <div style="background:rgba(10,11,14,0.95);backdrop-filter:blur(12px);color:#fff;padding:8px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);font-family:'IBM Plex Sans',sans-serif;width:max-content;max-width:380px;word-wrap:break-word;white-space:normal;">
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.15em;color:${d.color};margin-bottom:4px;">${d.event.category}</div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.15em;color:${d.color};margin-bottom:4px;">
+              ${d.kind === 'weather' ? 'Weather' : d.payload.category}
+            </div>
             <div style="font-size:12px;font-weight:500;line-height:1.4;">${d.label}</div>
-            <div style="font-size:10px;color:#94A3B8;margin-top:6px;">${d.event.country}</div>
+            <div style="font-size:10px;color:#94A3B8;margin-top:6px;">
+              ${d.kind === 'weather'
+            ? `Temp ${d.payload.current?.temperature_2m ?? "N/A"}°C • Wind ${d.payload.current?.wind_speed_10m ?? "N/A"} km/h`
+            : d.payload.country
+          }
+            </div>
           </div>
         `}
         ringsData={ringsData}
@@ -162,4 +184,3 @@ export default function GlobeView({ events, onEventClick, selectedEvent }) {
     </div>
   );
 }
-

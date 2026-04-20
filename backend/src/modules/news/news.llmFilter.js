@@ -78,13 +78,13 @@ const ALLOWED_TYPES = [
 const isMajorEvent = (title = "") => {
 	const keywords = [
 		// Conflict & geopolitics
-		"war", "blockade", "nuclear", "sanction", "military", "attack", 
-		"strike", "ceasefire", "troops", "missile", "invasion", "crisis", 
+		"war", "blockade", "nuclear", "sanction", "military", "attack",
+		"strike", "ceasefire", "troops", "missile", "invasion", "crisis",
 		"coup", "bomb", "killed", "dead", "explosion", "shoot", "terror",
 		"rebellion",
-		
+
 		// Major globally impactful terms
-		"economy", "market", "breaking", "emergency", "disaster", "earthquake", 
+		"economy", "market", "breaking", "emergency", "disaster", "earthquake",
 		"pandemic", "election", "scandal", "breakthrough", "historic", "global",
 		"mass-death", "policy", "legislation", "reform", "law", "government"
 	];
@@ -160,19 +160,29 @@ const cleanCountry = (country) => {
 exports.llmFilter = async (articles = []) => {
 	logger.info("Running LLM filter...", "news.llmFilter");
 
-	const BATCH_SIZE = 5;
+	const BATCH_SIZE = Number(process.env.LLM_BATCH_SIZE || 5);
+	const MAX_LLM_CALLS = Number(process.env.MAX_LLM_CALLS_PER_RUN || 30);
+	const MIN_CONFIDENCE = Number(process.env.LLM_CONFIDENCE_THRESHOLD || 0.35);
 	const results = [];
+	let llmCalls = 0;
 
 	for (let i = 0; i < articles.length; i += BATCH_SIZE) {
+		if (llmCalls >= MAX_LLM_CALLS) {
+			logger.warn("LLM call budget reached. Skipping remaining batches.", "news.llmFilter");
+			break;
+		}
+
 		const batch = articles.slice(i, i + BATCH_SIZE);
 
 		try {
 			const prompt = buildPrompt(batch);
 
+			llmCalls += 1;
 			let raw = await queryLLM(prompt);
 			let parsed = extractJSON(raw);
 
-			if (!parsed) {
+			if (!parsed && llmCalls < MAX_LLM_CALLS) {
+				llmCalls += 1;
 				raw = await queryLLM(prompt);
 				parsed = extractJSON(raw);
 			}
@@ -189,7 +199,7 @@ exports.llmFilter = async (articles = []) => {
 				}
 
 				// Lower threshold: only skip non-major events with very low confidence
-				if (!isMajorEvent(original.title) && item.confidence < 0.35) {
+				if (!isMajorEvent(original.title) && item.confidence < MIN_CONFIDENCE) {
 					return;
 				}
 
@@ -221,7 +231,7 @@ exports.llmFilter = async (articles = []) => {
 	}
 
 	logger.info(
-		`LLM processed ${articles.length} → ${results.length}`,
+		`LLM processed ${articles.length} → ${results.length} (calls: ${llmCalls}/${MAX_LLM_CALLS})`,
 		"news.llmFilter",
 	);
 

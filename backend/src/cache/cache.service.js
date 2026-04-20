@@ -1,17 +1,21 @@
 const redis = require("../config/redis.js");
 const logger = require("../utils/logger.js");
 const stringSimilarity = require("string-similarity");
+const {
+  getEventsByDate,
+  getAvailableDatesFromDb,
+  isDatabaseEnabled,
+} = require("../db/events.repository");
 
 const ARCHIVE_INDEX = "geopolitics_archive_dates";
+const RETENTION_DAYS = Number(process.env.RETENTION_DAYS || 15);
+const CACHE_TTL_SECONDS = Number(
+  process.env.REDIS_CACHE_TTL_SECONDS || RETENTION_DAYS * 24 * 60 * 60
+);
+const MAX_ARCHIVE_DATES = Number(process.env.REDIS_MAX_ARCHIVE_DATES || 45);
 
-// Returns today's date as "YYYY-MM-DD" in local time.
-const todayString = () => {
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm   = String(d.getMonth() + 1).padStart(2, "0");
-  const dd   = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-};
+// Returns today's date as "YYYY-MM-DD" in UTC (matches MongoDB's published_at UTC timestamps).
+const todayString = () => new Date().toISOString().slice(0, 10);
 
 // Compute dynamic key
 const getDailyKey = (dateStr) => `geopolitics_events:${dateStr}`;
@@ -35,7 +39,7 @@ const _isSameEvent = (a, b) => {
   if (!a.title || !b.title) return false;
 
   const sameCountry = (a.country || "") === (b.country || "");
-  const sameType    = (a.type   || "") === (b.type   || "");
+  const sameType = (a.type || "") === (b.type || "");
 
   const timeDiff =
     Math.abs(new Date(a.timestamp) - new Date(b.timestamp)) / (1000 * 60 * 60);
@@ -61,7 +65,7 @@ const _mergeDedup = (existing, incoming) => {
           existingUrls.add(src.url);
         }
       }
-      match.severity   = Math.max(match.severity, evt.severity);
+      match.severity = Math.max(match.severity, evt.severity);
       match.confidence = (match.confidence + evt.confidence) / 2;
     } else {
       merged.push({ ...evt });
@@ -71,15 +75,66 @@ const _mergeDedup = (existing, incoming) => {
   return merged;
 };
 
+const _cutoffDateString = () => {
+  const cutoff = new Date();
+  cutoff.setUTCDate(cutoff.getUTCDate() - RETENTION_DAYS);
+  const yyyy = cutoff.getUTCFullYear();
+  const mm = String(cutoff.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(cutoff.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+// ---------- INTERNAL: prune dates older than retention ----------
+const _pruneExpiredArchiveDates = async () => {
+  if (RETENTION_DAYS <= 0) return;
+
+  const dates = await redis.smembers(ARCHIVE_INDEX);
+  if (!dates || dates.length === 0) return;
+
+  const cutoff = _cutoffDateString();
+  const expiredDates = dates.filter((d) => d < cutoff);
+  if (expiredDates.length === 0) return;
+
+  const expiredKeys = expiredDates.map(getDailyKey);
+  await redis.del(...expiredKeys);
+  await redis.srem(ARCHIVE_INDEX, ...expiredDates);
+
+  logger.info(
+    `Retention prune evicted ${expiredDates.length} Redis archive date keys older than ${RETENTION_DAYS} days`,
+    "cache"
+  );
+};
+
+// ---------- INTERNAL: keep archive index bounded (cache replacement) ----------
+const _pruneArchiveIndex = async () => {
+  if (MAX_ARCHIVE_DATES <= 0) return;
+
+  const dates = (await redis.smembers(ARCHIVE_INDEX)).sort();
+  if (dates.length <= MAX_ARCHIVE_DATES) return;
+
+  const evictDates = dates.slice(0, dates.length - MAX_ARCHIVE_DATES);
+  if (evictDates.length === 0) return;
+
+  const keysToDelete = evictDates.map(getDailyKey);
+  await redis.del(...keysToDelete);
+  await redis.srem(ARCHIVE_INDEX, ...evictDates);
+
+  logger.info(
+    `Cache replacement evicted ${evictDates.length} archive date keys`,
+    "cache"
+  );
+};
+
 // ---------- INTERNAL: write envelope to target date key & index ----------
 const _writeEnvelope = async (envelope) => {
   const dateStr = envelope.date || todayString();
   const key = getDailyKey(dateStr);
   const json = JSON.stringify(envelope);
 
-  // Instead of deleting at midnight, we persist it. (Could add EX 30 days if desired later)
-  await redis.set(key, json);
+  await redis.set(key, json, "EX", CACHE_TTL_SECONDS);
   await redis.sadd(ARCHIVE_INDEX, dateStr);
+  await _pruneExpiredArchiveDates();
+  await _pruneArchiveIndex();
 
   logger.info(
     `Cache written mapped to date: ${dateStr} — ${envelope.events.length} events archived`,
@@ -90,9 +145,20 @@ const _writeEnvelope = async (envelope) => {
 // ---------- PUBLIC: list all archived dates ----------
 exports.getAvailableDates = async () => {
   try {
+    await _pruneExpiredArchiveDates();
     const dates = await redis.smembers(ARCHIVE_INDEX);
-    if (!dates || dates.length === 0) return [todayString()];
-    return dates.sort(); // ascending order e.g ["2026-04-18", "2026-04-19"]
+    if (dates && dates.length > 0) return dates.sort();
+
+    if (isDatabaseEnabled()) {
+      const dbDates = await getAvailableDatesFromDb();
+      if (dbDates.length > 0) {
+        await redis.sadd(ARCHIVE_INDEX, ...dbDates);
+        await _pruneArchiveIndex();
+        return dbDates;
+      }
+    }
+
+    return [todayString()];
   } catch (err) {
     logger.error(`Redis SMEMBERS error: ${err.message}`, "cache");
     return [todayString()];
@@ -104,14 +170,23 @@ exports.getCache = async (targetDate) => {
   try {
     const dateStr = targetDate || todayString();
     const key = getDailyKey(dateStr);
-    
+
     logger.info(`Checking Redis cache for target date: ${dateStr}...`, "cache");
 
     let envelope = await _readEnvelope(key);
-    
+
     if (envelope) {
       logger.info(`Cache hit (${dateStr}) — ${envelope.events.length} events`, "cache");
       return envelope.events;
+    }
+
+    if (isDatabaseEnabled()) {
+      const dbEvents = await getEventsByDate(dateStr);
+      if (dbEvents.length > 0) {
+        logger.info(`Cache miss (${dateStr}) resolved from MongoDB (${dbEvents.length} events)`, "cache");
+        await _writeEnvelope({ date: dateStr, events: dbEvents });
+        return dbEvents;
+      }
     }
 
     // Attempt cold-start fallback (try finding ANY data if strictly looking for today)
@@ -119,9 +194,18 @@ exports.getCache = async (targetDate) => {
       logger.warn(`No DB records exactly matching ${dateStr}. Searching fallback index.`, "cache");
       const availableDates = await exports.getAvailableDates();
       if (availableDates.length > 0) {
-        const fallbackKey = getDailyKey(availableDates[availableDates.length - 1]);
+        const fallbackDate = availableDates[availableDates.length - 1];
+        const fallbackKey = getDailyKey(fallbackDate);
         const fallbackEnvelope = await _readEnvelope(fallbackKey);
         if (fallbackEnvelope && fallbackEnvelope.events) return fallbackEnvelope.events;
+
+        if (isDatabaseEnabled()) {
+          const fallbackDbEvents = await getEventsByDate(fallbackDate);
+          if (fallbackDbEvents.length > 0) {
+            await _writeEnvelope({ date: fallbackDate, events: fallbackDbEvents });
+            return fallbackDbEvents;
+          }
+        }
       }
     }
 
@@ -129,6 +213,18 @@ exports.getCache = async (targetDate) => {
     return null;
   } catch (err) {
     logger.error(`Redis GET error: ${err.message}`, "cache");
+    return null;
+  }
+};
+
+// ---------- PUBLIC: redis-only read (no DB fallback) ----------
+exports.getCacheOnly = async (targetDate) => {
+  try {
+    const dateStr = targetDate || todayString();
+    const envelope = await _readEnvelope(getDailyKey(dateStr));
+    return envelope?.events || null;
+  } catch (err) {
+    logger.error(`Redis getCacheOnly error: ${err.message}`, "cache");
     return null;
   }
 };

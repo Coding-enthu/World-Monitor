@@ -1,6 +1,9 @@
 const logger = require("../../utils/logger.js");
 
 // Sources
+const { fetchFromRSS } = require("./sources/rss/fetcher.js");
+const { normalizeRSS } = require("./sources/rss/normalizer.js");
+
 const { fetchFromNewsAPI } = require("./sources/newsapi/fetcher.js");
 const { normalizeNewsAPI } = require("./sources/newsapi/normalizer.js");
 
@@ -12,8 +15,18 @@ const { normalizeGuardian } = require("./sources/guardian/normalizer.js");
 
 exports.aggregateNews = async () => {
 	logger.info("Starting news aggregation...", "news.aggregator");
+	const maxArticles = Number(process.env.MAX_ARTICLES_PER_RUN || 120);
 
 	let allArticles = [];
+
+	// ---------- RSS ----------
+	try {
+		const raw = await fetchFromRSS();
+		const normalized = normalizeRSS(raw);
+		allArticles.push(...normalized);
+	} catch (err) {
+		logger.error("RSS pipeline failed", "news.aggregator");
+	}
 
 	// ---------- NewsAPI ----------
 	try {
@@ -42,10 +55,20 @@ exports.aggregateNews = async () => {
 		logger.error("Guardian pipeline failed", "news.aggregator");
 	}
 
+	const deduped = [];
+	const seenUrls = new Set();
+	for (const article of allArticles) {
+		if (!article?.url || seenUrls.has(article.url)) continue;
+		seenUrls.add(article.url);
+		deduped.push(article);
+	}
+
+	const bounded = deduped.slice(0, maxArticles);
+
 	logger.info(
-		`Total aggregated articles: ${allArticles.length}`,
+		`Total aggregated articles: ${allArticles.length} → deduped ${deduped.length} → bounded ${bounded.length}`,
 		"news.aggregator",
 	);
 
-	return allArticles;
+	return bounded;
 };

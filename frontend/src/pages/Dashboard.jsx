@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, lazy, Suspense } from 'react';
-import { fetchGeopoliticsData, fetchAvailableDates } from '../services/api';
+import { motion } from 'framer-motion';
+import { fetchGeopoliticsData, fetchAvailableDates, fetchWeatherRegions, CATEGORY_LIST } from '../services/api';
 import MapView from '../components/MapView';
 import GlobalCounters from '../components/GlobalCounters';
 import CategoryFilters from '../components/CategoryFilters';
@@ -13,10 +14,40 @@ import NewEventToast from '../components/NewEventToast';
 import EventGraph from '../components/EventGraph';
 import SimulationPanel from '../components/SimulationPanel';
 import FinanceCorrelation from '../components/FinanceCorrelation';
+import TopRightDataHub from '../components/TopRightDataHub';
 import useWebSocket from '../hooks/useWebSocket';
 import { Map, Globe as GlobeIcon, GitBranch, Zap } from 'lucide-react';
 
 const GlobeView = lazy(() => import('../components/GlobeView'));
+const DRAG_CLICK_THRESHOLD = 6;
+const DRAG_CLICK_SUPPRESS_MS = 250;
+
+function DraggableControl({ className = '', children, ...props }) {
+  const suppressClickUntilRef = React.useRef(0);
+
+  return (
+    <motion.div
+      drag
+      dragMomentum={false}
+      onDragEnd={(_, info) => {
+        const distance = Math.hypot(info.offset.x, info.offset.y);
+        if (distance > DRAG_CLICK_THRESHOLD) {
+          suppressClickUntilRef.current = Date.now() + DRAG_CLICK_SUPPRESS_MS;
+        }
+      }}
+      onClickCapture={(e) => {
+        if (Date.now() < suppressClickUntilRef.current) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+      className={`cursor-move ${className}`}
+      {...props}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 export default function Dashboard() {
   const [markers, setMarkers] = useState([]);
@@ -24,11 +55,14 @@ export default function Dashboard() {
   const [stats, setStats] = useState({
     total_events: 0, active_countries: 0, by_category: {}, recent_count: 0
   });
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [selectedCategories, setSelectedCategories] = useState(
+    CATEGORY_LIST.filter((cat) => cat.id !== 'all').map((cat) => cat.id)
+  );
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [pipelineRunning, setPipelineRunning] = useState(false);
   const [timelineDate, setTimelineDate] = useState(null);
   const [availableDates, setAvailableDates] = useState([]);
   const [viewMode, setViewMode] = useState('2d');
@@ -37,6 +71,8 @@ export default function Dashboard() {
   const [newEventToast, setNewEventToast] = useState(null);
   const [isGraphOpen, setIsGraphOpen] = useState(false);
   const [isSimulationOpen, setIsSimulationOpen] = useState(false);
+  const [weatherLayerEnabled, setWeatherLayerEnabled] = useState(false);
+  const [weatherMarkers, setWeatherMarkers] = useState([]);
 
   // WebSocket
   const handleNewEvent = useCallback((eventData) => {
@@ -58,23 +94,26 @@ export default function Dashboard() {
 
   const { isConnected } = useWebSocket({ onNewEvent: handleNewEvent, onStatsUpdate: handleStatsUpdate });
 
-  // Data fetching
+  // Data fetching — returns event count so callers can detect empty pipeline
   const fetchData = useCallback(async (targetDate = null) => {
     try {
       const data = await fetchGeopoliticsData(targetDate);
       setMarkers(data.markers);
       setEvents(data.events);
       setStats(data.stats);
-    } catch (e) { console.error('Fetch error:', e); }
+      return data.events.length;
+    } catch (e) { console.error('Fetch error:', e); return 0; }
   }, []);
 
   // Initialization
   useEffect(() => {
     const init = async () => {
-      try { 
+      try {
         const dates = await fetchAvailableDates();
         setAvailableDates(dates);
-        await fetchData(); 
+        const count = await fetchData();
+        // If the pipeline hasn't finished yet (0 events), let the user know
+        if (count === 0) setPipelineRunning(true);
       }
       catch (e) { console.error('Init error:', e); }
       setLoading(false);
@@ -90,34 +129,74 @@ export default function Dashboard() {
     }
   }, [timelineDate, fetchData, loading]);
 
-  // Background Polling (Only if viewing today)
+  // Background Polling:
+  // - Every 15s while pipeline is warming up (events === 0)
+  // - Every 60s normally (WebSocket handles real-time, polling is just a safety net)
   useEffect(() => {
-    const interval = setInterval(() => { 
-      if (!timelineDate) fetchData(); 
-    }, 30000);
+    const POLL_MS = pipelineRunning ? 15000 : 60000;
+    const interval = setInterval(async () => {
+      if (!timelineDate) {
+        const count = await fetchData();
+        if (count > 0 && pipelineRunning) {
+          setPipelineRunning(false);
+          const dates = await fetchAvailableDates();
+          setAvailableDates(dates);
+        }
+      }
+    }, POLL_MS);
     return () => clearInterval(interval);
-  }, [fetchData, timelineDate]);
+  }, [fetchData, timelineDate, pipelineRunning]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let interval = null;
+
+    const loadWeatherRegions = async () => {
+      try {
+        const regions = await fetchWeatherRegions();
+        if (!cancelled) {
+          setWeatherMarkers(regions);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setWeatherMarkers([]);
+        }
+      }
+    };
+
+    if (weatherLayerEnabled) {
+      loadWeatherRegions();
+      interval = setInterval(loadWeatherRegions, 10 * 60 * 1000);
+    } else {
+      setWeatherMarkers([]);
+    }
+
+    return () => {
+      cancelled = true;
+      if (interval) clearInterval(interval);
+    };
+  }, [weatherLayerEnabled]);
 
   // Filtering (No timeline filtering needed, API serves exact day dataset)
   const filteredMarkers = useMemo(() => {
     let result = markers;
-    if (activeCategory !== 'all') result = result.filter(e => e.category === activeCategory);
+    result = result.filter(e => selectedCategories.includes(e.category));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(e => e.title.toLowerCase().includes(q) || e.country.toLowerCase().includes(q));
     }
     return result;
-  }, [markers, activeCategory, searchQuery]);
+  }, [markers, selectedCategories, searchQuery]);
 
   const filteredEvents = useMemo(() => {
     let result = events;
-    if (activeCategory !== 'all') result = result.filter(e => e.category === activeCategory);
+    result = result.filter(e => selectedCategories.includes(e.category));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(e => e.title.toLowerCase().includes(q) || e.description.toLowerCase().includes(q) || e.country.toLowerCase().includes(q));
     }
     return result;
-  }, [events, activeCategory, searchQuery]);
+  }, [events, selectedCategories, searchQuery]);
 
   // Handlers
   const handleEventClick = useCallback((event) => {
@@ -148,12 +227,30 @@ export default function Dashboard() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden" data-testid="dashboard">
+      {/* Pipeline warming-up banner */}
+      {pipelineRunning && (
+        <div className="fixed top-0 inset-x-0 z-50 bg-yellow-500/20 border-b border-yellow-500/40 text-yellow-300 text-xs font-mono text-center py-1.5 tracking-wider">
+          ⚡ News pipeline ingesting data — events will appear shortly. Checking every 15s…
+        </div>
+      )}
+
       {/* Map / Globe Layer */}
       {viewMode === '2d' ? (
-        <MapView events={filteredMarkers} onEventClick={handleEventClick} onCountryClick={handleCountryClick} selectedEvent={selectedEvent} />
+        <MapView
+          events={filteredMarkers}
+          weatherMarkers={weatherMarkers}
+          onEventClick={handleEventClick}
+          onCountryClick={handleCountryClick}
+          selectedEvent={selectedEvent}
+        />
       ) : (
         <Suspense fallback={<div className="absolute inset-0 bg-[var(--bg-base)]" />}>
-          <GlobeView events={filteredMarkers} onEventClick={handleEventClick} selectedEvent={selectedEvent} />
+          <GlobeView
+            events={filteredMarkers}
+            weatherMarkers={weatherMarkers}
+            onEventClick={handleEventClick}
+            selectedEvent={selectedEvent}
+          />
         </Suspense>
       )}
 
@@ -161,12 +258,25 @@ export default function Dashboard() {
       <GlobalCounters stats={stats} isConnected={isConnected} />
 
       {/* Left: Category Filters */}
-      <CategoryFilters activeCategory={activeCategory} onCategoryChange={setActiveCategory} stats={stats} />
+      <CategoryFilters
+        selectedCategories={selectedCategories}
+        onSelectionChange={setSelectedCategories}
+        stats={stats}
+        weatherLayerEnabled={weatherLayerEnabled}
+        onWeatherLayerChange={setWeatherLayerEnabled}
+      />
 
       {/* Right Column Controls: Search & Toggles */}
-      <div className="fixed top-24 right-4 z-30 flex flex-col items-end gap-2.5" data-testid="controls-column">
+      <div className="fixed top-20 right-4 z-30 flex flex-col items-end gap-2.5" data-testid="controls-column">
+        <TopRightDataHub />
+
         {/* View Toggle */}
-        <div className="flex gap-1 glass-panel rounded-md p-1" data-testid="view-toggle">
+        <DraggableControl
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex gap-1 glass-panel rounded-md p-1"
+          data-testid="view-toggle"
+        >
           <button
             onClick={() => setViewMode('2d')}
             className={`px-2.5 py-1.5 rounded-sm transition-all ${viewMode === '2d' ? 'bg-[var(--cat-political)] text-white' : 'text-[var(--text-secondary)] hover:text-white'}`}
@@ -181,33 +291,39 @@ export default function Dashboard() {
           >
             <GlobeIcon className="w-4 h-4" />
           </button>
-        </div>
+        </DraggableControl>
 
         {/* Graph Button */}
-        <button
-          onClick={() => setIsGraphOpen(true)}
-          className="glass-panel rounded-md px-3 py-2 flex items-center gap-1.5 hover:bg-[var(--bg-elevated)] transition-colors"
-          data-testid="graph-btn"
-        >
-          <GitBranch className="w-4 h-4 text-[var(--cat-political)]" />
-          <span className="text-[10px] font-mono text-[var(--text-secondary)] hidden lg:block">Graph</span>
-        </button>
+        <DraggableControl data-testid="graph-btn">
+          <button
+            onClick={() => setIsGraphOpen(true)}
+            className="glass-panel rounded-md px-3 py-2 flex items-center gap-1.5 hover:bg-[var(--bg-elevated)] transition-colors"
+          >
+            <GitBranch className="w-4 h-4 text-[var(--cat-political)]" />
+            <span className="text-[10px] font-mono text-[var(--text-secondary)] hidden lg:block">Graph</span>
+          </button>
+        </DraggableControl>
 
         {/* Simulation Button */}
-        <button
-          onClick={() => setIsSimulationOpen(true)}
-          className="glass-panel rounded-md px-3 py-2 flex items-center gap-1.5 hover:bg-[var(--bg-elevated)] transition-colors"
-          data-testid="simulation-btn"
-        >
-          <Zap className="w-4 h-4 text-[var(--cat-economic)]" />
-          <span className="text-[10px] font-mono text-[var(--text-secondary)] hidden lg:block">Simulate</span>
-        </button>
+        <DraggableControl data-testid="simulation-btn">
+          <button
+            onClick={() => setIsSimulationOpen(true)}
+            className="glass-panel rounded-md px-3 py-2 flex items-center gap-1.5 hover:bg-[var(--bg-elevated)] transition-colors"
+          >
+            <Zap className="w-4 h-4 text-[var(--cat-economic)]" />
+            <span className="text-[10px] font-mono text-[var(--text-secondary)] hidden lg:block">Simulate</span>
+          </button>
+        </DraggableControl>
 
         {/* Search */}
-        <SearchBar onSearch={setSearchQuery} />
+        <DraggableControl>
+          <SearchBar onSearch={setSearchQuery} />
+        </DraggableControl>
 
         {/* Finance Correlation (moved inside flex so it doesn't overlap toggles) */}
-        <FinanceCorrelation />
+        <DraggableControl>
+          <FinanceCorrelation events={events} />
+        </DraggableControl>
       </div>
 
       {/* Bottom Left: Event Feed */}
@@ -217,13 +333,13 @@ export default function Dashboard() {
       <TimelineSlider availableDates={availableDates} events={markers} onTimelineChange={setTimelineDate} activeDate={timelineDate} />
 
       {/* Panels */}
-      <IntelPanel 
-        event={selectedEvent} 
-        isOpen={isPanelOpen} 
+      <IntelPanel
+        event={selectedEvent}
+        isOpen={isPanelOpen}
         onClose={() => {
           setIsPanelOpen(false);
           setSelectedEvent(null);
-        }} 
+        }}
       />
       <CountryIntelPanel country={selectedCountry} isOpen={isCountryPanelOpen} onClose={() => setIsCountryPanelOpen(false)} allEvents={events} />
       <EventGraph isOpen={isGraphOpen} onClose={() => setIsGraphOpen(false)} allEvents={events} />

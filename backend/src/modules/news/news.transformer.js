@@ -1,4 +1,5 @@
 const logger = require("../../utils/logger");
+const crypto = require("crypto");
 
 const COUNTRY_MAP = {
 	us: "United States",
@@ -28,13 +29,19 @@ const normalizeCountry = (country) => {
 	return COUNTRY_MAP[country.toLowerCase()] || country;
 };
 
+const buildStableEventId = (event) => {
+	const raw = `${event.url || ""}::${event.title || ""}::${event.country || "Global"}`;
+	const hash = crypto.createHash("sha1").update(raw).digest("hex").slice(0, 12);
+	return `evt_${hash}`;
+};
+
 exports.transformEvents = (events = []) => {
 	logger.info("Transforming events...", "news.transformer");
 
 	const transformed = events
-		.map((e, i) => {
+		.map((e) => {
 			const country = normalizeCountry(e.country);
-			
+
 			// 1. Prefer LLM's dynamic target-specific coordinates
 			// 2. Fallback to broad static country mapping
 			// 3. Handle nulls safely
@@ -44,11 +51,11 @@ exports.transformEvents = (events = []) => {
 			}
 			if (!coords || !Array.isArray(coords) || coords.length !== 2) {
 				// Handle null/unmappable coordinates by giving generic default
-				coords = [0, 0]; 
+				coords = [0, 0];
 			}
 
 			return {
-				id: `evt_${Date.now()}_${i}`,
+				id: buildStableEventId(e),
 
 				type: e.event_type,
 				country,

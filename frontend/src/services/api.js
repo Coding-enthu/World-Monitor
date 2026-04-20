@@ -1,23 +1,25 @@
 import axios from 'axios';
 
 // Backend URL — single endpoint
-const API_URL = 'http://localhost:5000/api/geopolitics';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+const BASE_API_URL = `${BACKEND_URL}/api`;
+const API_URL = `${BACKEND_URL}/api/geopolitics`;
 
 /**
  * Category color palette matching the backend's CATEGORY_ORDER.
  * Exported so components can import it instead of duplicating.
  */
 export const CATEGORY_COLORS = {
-  'Armed Conflict':        '#FF3B30',
-  'Terrorism & Security':  '#DC2626',
-  'Cyber & Tech':          '#10B981',
-  'Politics':              '#3B82F6',
-  'Diplomacy':             '#22C55E',
+  'Armed Conflict': '#FF3B30',
+  'Terrorism & Security': '#DC2626',
+  'Cyber & Tech': '#10B981',
+  'Politics': '#3B82F6',
+  'Diplomacy': '#22C55E',
   'Diplomacy & Sanctions': '#F59E0B',
-  'Global Economy':        '#A855F7',
-  'Health & Disaster':     '#EC4899',
+  'Global Economy': '#A855F7',
+  'Health & Disaster': '#EC4899',
   'Environment & Climate': '#14B8A6',
-  'Other':                 '#94A3B8',
+  'Other': '#94A3B8',
 };
 
 /**
@@ -25,17 +27,17 @@ export const CATEGORY_COLORS = {
  * Used by CategoryFilters to render in consistent order.
  */
 export const CATEGORY_LIST = [
-  { id: 'all',                     label: 'All',                color: '#FFFFFF' },
-  { id: 'Armed Conflict',          label: 'Armed Conflict',     color: '#FF3B30' },
-  { id: 'Terrorism & Security',    label: 'Terror / Security',  color: '#DC2626' },
-  { id: 'Cyber & Tech',            label: 'Cyber & Tech',       color: '#10B981' },
-  { id: 'Politics',                label: 'Politics',           color: '#3B82F6' },
-  { id: 'Diplomacy',               label: 'Diplomacy',          color: '#22C55E' },
-  { id: 'Diplomacy & Sanctions',   label: 'Sanctions',          color: '#F59E0B' },
-  { id: 'Global Economy',          label: 'Global Economy',     color: '#A855F7' },
-  { id: 'Health & Disaster',       label: 'Health & Disaster',  color: '#EC4899' },
-  { id: 'Environment & Climate',   label: 'Climate / Env',      color: '#14B8A6' },
-  { id: 'Other',                   label: 'Other',              color: '#94A3B8' },
+  { id: 'all', label: 'All', color: '#FFFFFF' },
+  { id: 'Armed Conflict', label: 'Armed Conflict', color: '#FF3B30' },
+  { id: 'Terrorism & Security', label: 'Terror / Security', color: '#DC2626' },
+  { id: 'Cyber & Tech', label: 'Cyber & Tech', color: '#10B981' },
+  { id: 'Politics', label: 'Politics', color: '#3B82F6' },
+  { id: 'Diplomacy', label: 'Diplomacy', color: '#22C55E' },
+  { id: 'Diplomacy & Sanctions', label: 'Sanctions', color: '#F59E0B' },
+  { id: 'Global Economy', label: 'Global Economy', color: '#A855F7' },
+  { id: 'Health & Disaster', label: 'Health & Disaster', color: '#EC4899' },
+  { id: 'Environment & Climate', label: 'Climate / Env', color: '#14B8A6' },
+  { id: 'Other', label: 'Other', color: '#94A3B8' },
 ];
 
 /**
@@ -87,13 +89,13 @@ export const fetchGeopoliticsData = async (date = null) => {
         // --- normalised fields the UI already reads ---
         category,
         published_at: evt.timestamp,
-        intensity:    evt.severity,            // 1-5 scale used by markers
-        location:     evt.coords && evt.coords.length === 2
-                        ? { lat: evt.coords[0], lng: evt.coords[1] }
-                        : null,
+        intensity: evt.severity,            // 1-5 scale used by markers
+        location: evt.coords && evt.coords.length === 2
+          ? { lat: evt.coords[0], lng: evt.coords[1] }
+          : null,
         // convenience: first source link / name for IntelPanel
-        source_url:   evt.sources?.[0]?.url  || null,
-        source_name:  evt.sources?.[0]?.name || null,
+        source_url: evt.sources?.[0]?.url || null,
+        source_name: evt.sources?.[0]?.name || null,
       });
     });
   });
@@ -102,13 +104,55 @@ export const fetchGeopoliticsData = async (date = null) => {
   allEvents.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
 
   return {
-    events:  allEvents,
+    events: allEvents,
     markers: allEvents.filter(e => e.location !== null),
     stats: {
-      total_events:     count || allEvents.length,
+      total_events: count || allEvents.length,
       active_countries: countries.size,
-      by_category:      byCategory,
-      recent_count:     count || allEvents.length,
+      by_category: byCategory,
+      recent_count: count || allEvents.length,
     },
   };
+};
+
+export const fetchLiveNews = async (limit = 20) => {
+  const res = await axios.get(`${BASE_API_URL}/news/live`, {
+    params: { limit },
+    timeout: 15000,
+  });
+  return res.data?.data || [];
+};
+
+export const fetchTrendingArticles = async ({ limit = 20, days = 3 } = {}) => {
+  const res = await axios.get(`${BASE_API_URL}/articles/trending`, {
+    params: { limit, days },
+    timeout: 15000,
+  });
+  return res.data?.data || [];
+};
+
+export const fetchStockQuotes = async () => {
+  const res = await axios.get(`${BASE_API_URL}/stocks/quotes`, { timeout: 15000 });
+  return {
+    live: Boolean(res.data?.live),
+    data: res.data?.data || [],
+  };
+};
+
+export const fetchWeatherForecast = async ({
+  latitude,
+  longitude,
+  days = 7,
+  hourly = 'temperature_2m',
+}) => {
+  const res = await axios.get(`${BASE_API_URL}/weather/forecast`, {
+    params: { latitude, longitude, days, hourly },
+    timeout: 15000,
+  });
+  return res.data?.data || null;
+};
+
+export const fetchWeatherRegions = async () => {
+  const res = await axios.get(`${BASE_API_URL}/weather/regions`, { timeout: 20000 });
+  return res.data?.data || [];
 };

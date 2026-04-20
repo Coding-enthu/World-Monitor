@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const logger = require("../utils/logger");
+const { eventsLimiter, datesLimiter } = require("../middleware/rateLimiter");
 
 const { getGeopoliticalEvents } = require("../modules/news/news.service");
 
@@ -138,7 +139,7 @@ const categorizeEvents = (events) => {
 };
 
 // GET /api/geopolitics/dates
-router.get("/geopolitics/dates", async (req, res) => {
+router.get("/geopolitics/dates", datesLimiter, async (req, res) => {
 	try {
 		logger.info("GET /api/geopolitics/dates", "routes");
 		const { getAvailableDates } = require("../cache/cache.service");
@@ -155,7 +156,7 @@ router.get("/geopolitics/dates", async (req, res) => {
 });
 
 // GET /api/geopolitics
-router.get("/geopolitics", async (req, res) => {
+router.get("/geopolitics", eventsLimiter, async (req, res) => {
 	const start = Date.now();
 
 	try {

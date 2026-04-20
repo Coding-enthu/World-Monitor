@@ -135,11 +135,11 @@ exports.preFilter = (articles = []) => {
 
 		const combinedText = `${title} ${description}`;
 
-		const hasWhitelist = true; // Bypass whitelist to include all major news categories
+		const hasWhitelist = containsKeyword(combinedText, WHITELIST);
 		const hasBlacklist = containsKeyword(combinedText, BLACKLIST);
 
 		// Final decision
-		return !hasBlacklist;
+		return hasWhitelist && !hasBlacklist;
 	});
 
 	logger.info(
