@@ -4,6 +4,7 @@ const app = require("./app");
 const logger = require("./utils/logger");
 
 const cron = require("node-cron");
+const { Server } = require("socket.io");
 const { runAllPipelines } = require("./jobs/main.job");
 const {
 	connectEventsRepository,
@@ -14,6 +15,15 @@ const {
 	connectWeatherRepository, 
 	closeWeatherRepository 
 } = require("./db/weather.repository");
+const {
+	connectChatRoomsRepository,
+	closeChatRoomsRepository,
+	isChatDatabaseEnabled,
+} = require("./db/chatRooms.repository");
+const {
+	registerChatSocket,
+	startInactiveRoomCleanup,
+} = require("./socket/chat.socket");
 
 const PORT = process.env.PORT || 5000;
 const PIPELINE_INTERVAL_MINUTES = Number(process.env.PIPELINE_INTERVAL_MINUTES || 15);
@@ -28,6 +38,18 @@ const server = app.listen(PORT, () => {
 	logger.info(`Server running on port ${PORT}`, "server");
 });
 
+const corsOrigins = process.env.CORS_ORIGIN
+	? process.env.CORS_ORIGIN.split(",").map((o) => o.trim())
+	: "*";
+const io = new Server(server, {
+	cors: {
+		origin: corsOrigins,
+		methods: ["GET", "POST"],
+	},
+});
+registerChatSocket(io);
+startInactiveRoomCleanup(io);
+
 // ---------- DB CONNECT ----------
 (async () => {
 	if (!isDatabaseEnabled()) {
@@ -38,6 +60,9 @@ const server = app.listen(PORT, () => {
 	try {
 		await connectEventsRepository();
 		await connectWeatherRepository();
+		if (isChatDatabaseEnabled()) {
+			await connectChatRoomsRepository();
+		}
 	} catch (err) {
 		logger.error(`MongoDB unavailable, continuing in cache-only mode: ${err.message}`, "server");
 	}
@@ -92,7 +117,7 @@ process.on("uncaughtException", (err) => {
 process.on("SIGINT", () => {
 	logger.warn("SIGINT received. Shutting down...", "server");
 	server.close(() => {
-		Promise.all([closeEventsRepository(), closeWeatherRepository()])
+		Promise.all([closeEventsRepository(), closeWeatherRepository(), closeChatRoomsRepository()])
 			.then(() => {
 				logger.info("Server closed", "server");
 				process.exit(0);
@@ -104,7 +129,7 @@ process.on("SIGINT", () => {
 process.on("SIGTERM", () => {
 	logger.warn("SIGTERM received. Shutting down...", "server");
 	server.close(() => {
-		Promise.all([closeEventsRepository(), closeWeatherRepository()])
+		Promise.all([closeEventsRepository(), closeWeatherRepository(), closeChatRoomsRepository()])
 			.then(() => {
 				logger.info("Server closed", "server");
 				process.exit(0);

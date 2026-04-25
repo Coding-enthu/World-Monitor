@@ -11,6 +11,7 @@ import EventFeed from '../components/EventFeed';
 import TimelineSlider from '../components/TimelineSlider';
 import CountryIntelPanel from '../components/CountryIntelPanel';
 import ChatBot from '../components/ChatBot';
+import RoomChatPopup from '../components/RoomChatPopup';
 import NewEventToast from '../components/NewEventToast';
 import EventGraph from '../components/EventGraph';
 import SimulationPanel from '../components/SimulationPanel';
@@ -419,6 +420,11 @@ if (mode === 'datahub') {
         {/* Search */}
         <DraggableControl>
           <SearchBar onSearch={setSearchQuery} />
+        </DraggableControl>
+
+        {/* Communication rooms */}
+        <DraggableControl data-testid="chat-rooms-btn">
+          <RoomChatPopup />
         </DraggableControl>
       </div>
 

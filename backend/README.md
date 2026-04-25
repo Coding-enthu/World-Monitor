@@ -107,6 +107,8 @@ REST API          → GET /api/geopolitics, GET /api/geopolitics/dates
 | `GET /api/geopolitics` | Today's events grouped by category |
 | `GET /api/geopolitics?date=YYYY-MM-DD` | Events for a specific archived date |
 | `GET /api/geopolitics/dates` | All available archive dates |
+| `GET /api/chat/rooms` | List active communication rooms and online users |
+| `POST /api/chat/rooms` | Create room (`roomName`, `topic`, `ownerName`) |
 
 **Response shape** (`/api/geopolitics`):
 
@@ -120,6 +122,22 @@ REST API          → GET /api/geopolitics, GET /api/geopolitics/dates
   }
 }
 ```
+
+---
+
+## Real-time Room Chat (Socket.IO)
+
+- Socket endpoint: same host as backend (`ws://<host>:<port>` via Socket.IO)
+- Room inactivity cleanup runs every `CHAT_ROOM_INACTIVE_MINUTES` (default: `10`)
+- Usernames are unique per room (case-insensitive) while connected
+- Room names are unique globally (case-insensitive)
+- Owner can remove users and delete the room
+
+Core Socket.IO events:
+
+- `chat:join`, `chat:leave`, `chat:send`
+- `chat:kick`, `chat:delete-room`
+- `chat:rooms-updated`, `chat:message`, `chat:presence`, `chat:room-deleted`
 
 ---
 
