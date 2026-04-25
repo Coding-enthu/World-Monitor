@@ -24,64 +24,7 @@ const createClient = () => {
 
 let client = createClient();
 
-// ---------- LANGCACHE CONFIG ----------
-const LANGCACHE_API_KEY   = process.env.LANGCACHE_API_KEY;
-const LANGCACHE_ID        = process.env.LANGCACHE_ID;
-const LANGCACHE_BASE      = "https://langcache.redis.io/v1";
-const LANGCACHE_THRESHOLD = Number(process.env.LANGCACHE_SIMILARITY_THRESHOLD || 0.90);
-const LANGCACHE_ENABLED   = Boolean(
-	LANGCACHE_API_KEY && 
-	LANGCACHE_ID && 
-	LANGCACHE_API_KEY !== "undefined" && 
-	LANGCACHE_ID !== "undefined" &&
-	LANGCACHE_API_KEY.length > 5
-);
 
-const langcacheHeaders = () => ({
-	"Authorization": `Bearer ${LANGCACHE_API_KEY}`,
-	"Content-Type":  "application/json",
-});
-
-// ---------- LANGCACHE: semantic search (check before calling LLM) ----------
-const langcacheSearch = async (prompt) => {
-	if (!LANGCACHE_ENABLED) return null;
-	try {
-		const res = await axios.post(
-			`${LANGCACHE_BASE}/${LANGCACHE_ID}/search`,
-			{ prompt, threshold: LANGCACHE_THRESHOLD },
-			{ headers: langcacheHeaders(), timeout: 5000 }
-		);
-		const hit = res.data?.results?.[0];
-		if (hit?.response) {
-			logger.info(
-				`LangCache HIT (similarity: ${(hit.score || 0).toFixed(3)}) — skipping Groq call`,
-				"llm.langcache"
-			);
-			return hit.response;
-		}
-		return null;
-	} catch (err) {
-		// Non-fatal: log and fall through to Groq
-		logger.warn(`LangCache search failed (will call Groq): ${err.message}`, "llm.langcache");
-		return null;
-	}
-};
-
-// ---------- LANGCACHE: store response after successful Groq call ----------
-const langcacheStore = async (prompt, response) => {
-	if (!LANGCACHE_ENABLED) return;
-	try {
-		await axios.post(
-			`${LANGCACHE_BASE}/${LANGCACHE_ID}/cache`,
-			{ prompt, response },
-			{ headers: langcacheHeaders(), timeout: 5000 }
-		);
-		logger.info("LangCache STORE — response saved for future semantic hits", "llm.langcache");
-	} catch (err) {
-		// Non-fatal: the response was already returned to caller
-		logger.warn(`LangCache store failed (non-fatal): ${err.message}`, "llm.langcache");
-	}
-};
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -135,20 +78,10 @@ const callGroq = async (prompt, retries = GROQ_KEYS.length + 1) => {
 	}
 };
 
-// ---------- PUBLIC: queryLLM (LangCache → Groq → store) ----------
+// ---------- PUBLIC: queryLLM ----------
 exports.queryLLM = async (prompt) => {
-	// 1. Check semantic cache first
-	const cached = await langcacheSearch(prompt);
-	if (cached) return cached;
-
-	// 2. Cache miss — call Groq
 	try {
-		const result = await callGroq(prompt);
-
-		// 3. Persist to LangCache for future similar prompts (fire-and-forget)
-		if (result) langcacheStore(prompt, result);
-
-		return result;
+		return await callGroq(prompt);
 	} catch (err) {
 		logger.error(`LLM request failed: ${err.message}`, "llm");
 		throw err;
