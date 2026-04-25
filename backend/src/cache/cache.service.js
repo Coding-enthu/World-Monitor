@@ -14,8 +14,12 @@ const CACHE_TTL_SECONDS = Number(
 );
 const MAX_ARCHIVE_DATES = Number(process.env.REDIS_MAX_ARCHIVE_DATES || 45);
 
-// Returns today's date as "YYYY-MM-DD" in UTC (matches MongoDB's published_at UTC timestamps).
-const todayString = () => new Date().toISOString().slice(0, 10);
+// Returns today's date as "YYYY-MM-DD" shifted to the local system timezone instead of strict UTC.
+const todayString = () => {
+  const d = new Date();
+  const tzOffset = d.getTimezoneOffset() * 60000;
+  return new Date(Date.now() - tzOffset).toISOString().slice(0, 10);
+};
 
 // Compute dynamic key
 const getDailyKey = (dateStr) => `geopolitics_events:${dateStr}`;
