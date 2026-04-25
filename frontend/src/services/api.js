@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Backend URL — single endpoint
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080';
 const BASE_API_URL = `${BACKEND_URL}/api`;
 const API_URL = `${BACKEND_URL}/api/geopolitics`;
 
