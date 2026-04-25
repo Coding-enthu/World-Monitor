@@ -63,6 +63,13 @@ exports.aggregateNews = async () => {
 		deduped.push(article);
 	}
 
+	// Sort by published date descending (newest first) to ensure fresh news beats old news
+	deduped.sort((a, b) => {
+		const dateA = new Date(a.published_at || a.timestamp || 0);
+		const dateB = new Date(b.published_at || b.timestamp || 0);
+		return dateB - dateA;
+	});
+
 	const bounded = deduped.slice(0, maxArticles);
 
 	logger.info(

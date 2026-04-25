@@ -1,6 +1,6 @@
 const logger = require("../../utils/logger");
-const { getCacheOnly } = require("../../cache/cache.service");
-const { getRecentDuplicateCandidates } = require("../../db/events.repository");
+const { getCacheOnly } = require("../../cache/weatherCache.service");
+const { getRecentDuplicateCandidates } = require("../../db/weather.repository");
 const { buildEventIdentity, isLikelyDuplicate } = require("../../utils/articleIdentity");
 
 const getDateKey = (timestamp) => {
@@ -83,8 +83,8 @@ exports.selectUniqueFifo = async (events = []) => {
   }
 
   logger.info(
-    `FIFO selector accepted ${selected.length}/${events.length}, rejected ${rejected.length}`,
-    "news.selector"
+    `FIFO selector (weather) accepted ${selected.length}/${events.length}, rejected ${rejected.length}`,
+    "weather.selector"
   );
 
   return { selected, rejected };

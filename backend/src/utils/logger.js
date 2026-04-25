@@ -9,7 +9,7 @@ const getTimestamp = () => new Date().toISOString();
 
 const log = (level, message, context = "app") => {
 	console.log(
-		`[${getTimestamp()}] [${levels[level]}] [${context}] ${message}`,
+		`[${getTimestamp()}] [${levels[level]}] [${context}] ${message}\n`,
 	);
 };
 

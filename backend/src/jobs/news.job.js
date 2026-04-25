@@ -12,28 +12,22 @@ const { mergeAndSetCache }   = require("../cache/cache.service");
 const { runMemoryGuard }     = require("./memoryGuard");
 
 exports.runNewsPipeline = async () => {
-  logger.info("Running scheduled news pipeline...", "job");
+  logger.info("Running GEOPOLITICS pipeline...", "news.job");
 
   try {
     // ── 1. PRE-FLIGHT: memory quota check ──────────────────────────────────
-    // Before fetching anything from the web, ensure we have room in the 30 MB
-    // Redis quota. Evicts oldest dates from Redis + MongoDB if near-full.
     const guardResult = await runMemoryGuard();
     if (guardResult.evicted) {
       logger.info(
         `Pre-pipeline eviction done (${guardResult.dates?.join(", ")}). ` +
         `Redis now at ${guardResult.usedMB} MB. Continuing pipeline…`,
-        "job"
+        "news.job"
       );
     }
 
     // ── 2. FETCH & AGGREGATE ────────────────────────────────────────────────
     const raw       = await aggregateNews();
     const filtered  = preFilter(raw);
-
-    // ── 3. LLM FILTER (LangCache → Groq → LangCache store) ─────────────────
-    // queryLLM inside llmFilter now checks Redis LangCache first,
-    // so repeated/similar article batches skip the Groq API call entirely.
     const llm         = await llmFilter(filtered);
 
     // ── 4. TRANSFORM + DEDUPLICATE + SELECT ─────────────────────────────────
