@@ -4,12 +4,16 @@ const app = require("./app");
 const logger = require("./utils/logger");
 
 const cron = require("node-cron");
-const { runNewsPipeline } = require("./jobs/news.job");
+const { runAllPipelines } = require("./jobs/main.job");
 const {
 	connectEventsRepository,
 	closeEventsRepository,
 	isDatabaseEnabled,
 } = require("./db/events.repository");
+const { 
+	connectWeatherRepository, 
+	closeWeatherRepository 
+} = require("./db/weather.repository");
 
 const PORT = process.env.PORT || 5000;
 const PIPELINE_INTERVAL_MINUTES = Number(process.env.PIPELINE_INTERVAL_MINUTES || 15);
@@ -33,6 +37,7 @@ const server = app.listen(PORT, () => {
 
 	try {
 		await connectEventsRepository();
+		await connectWeatherRepository();
 	} catch (err) {
 		logger.error(`MongoDB unavailable, continuing in cache-only mode: ${err.message}`, "server");
 	}
@@ -51,14 +56,14 @@ if (PIPELINE_ENABLED) {
 
 	// Run immediately on startup so the cache is populated ASAP
 	(async () => {
-		logger.info("Initial pipeline run starting...", "server");
-		await runNewsPipeline();
+		logger.info("Initial unified pipeline run starting...", "server");
+		await runAllPipelines();
 		logger.info(`Initial pipeline complete. Next scheduled run in ${PIPELINE_INTERVAL_MINUTES} min.`, "server");
 	})();
 
 	cron.schedule(CRON_PATTERN, async () => {
-		logger.info(`Cron fired — running pipeline (every ${PIPELINE_INTERVAL_MINUTES} min)`, "cron");
-		await runNewsPipeline();
+		logger.info(`Cron fired — running unified pipeline (every ${PIPELINE_INTERVAL_MINUTES} min)`, "cron");
+		await runAllPipelines();
 		logger.info("Cron pipeline run complete. Cache + DB updated.", "cron");
 	});
 } else {
@@ -81,7 +86,7 @@ process.on("uncaughtException", (err) => {
 process.on("SIGINT", () => {
 	logger.warn("SIGINT received. Shutting down...", "server");
 	server.close(() => {
-		closeEventsRepository()
+		Promise.all([closeEventsRepository(), closeWeatherRepository()])
 			.then(() => {
 				logger.info("Server closed", "server");
 				process.exit(0);
@@ -93,7 +98,7 @@ process.on("SIGINT", () => {
 process.on("SIGTERM", () => {
 	logger.warn("SIGTERM received. Shutting down...", "server");
 	server.close(() => {
-		closeEventsRepository()
+		Promise.all([closeEventsRepository(), closeWeatherRepository()])
 			.then(() => {
 				logger.info("Server closed", "server");
 				process.exit(0);

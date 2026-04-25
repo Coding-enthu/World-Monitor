@@ -8,6 +8,7 @@ const { globalLimiter } = require("./middleware/rateLimiter");
 
 // Routes
 const newsRoutes = require("./routes/news.routes");
+const weatherRoutes = require("./routes/weather.routes");
 const aiRoutes = require("./routes/ai.routes");
 const dataRoutes = require("./routes/data.routes");
 
@@ -72,6 +73,7 @@ app.use("/api", globalLimiter);
 
 // Main API
 app.use("/api", newsRoutes);
+app.use("/api", weatherRoutes);
 app.use("/api", aiRoutes);
 app.use("/api", dataRoutes);
 
