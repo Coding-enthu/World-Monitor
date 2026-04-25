@@ -11,6 +11,7 @@ const newsRoutes = require("./routes/news.routes");
 const weatherRoutes = require("./routes/weather.routes");
 const aiRoutes = require("./routes/ai.routes");
 const dataRoutes = require("./routes/data.routes");
+const chatRoutes = require("./routes/chat.routes");
 
 const app = express();
 
@@ -76,6 +77,7 @@ app.use("/api", newsRoutes);
 app.use("/api", weatherRoutes);
 app.use("/api", aiRoutes);
 app.use("/api", dataRoutes);
+app.use("/api", chatRoutes);
 
 // Root route
 app.get("/", (req, res) => {
