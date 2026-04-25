@@ -54,12 +54,18 @@ if (PIPELINE_ENABLED) {
 		"server"
 	);
 
+	const SKIP_INITIAL_PIPELINE = process.env.SKIP_INITIAL_PIPELINE === "true";
+
 	// Run immediately on startup so the cache is populated ASAP
-	(async () => {
-		logger.info("Initial unified pipeline run starting...", "server");
-		await runAllPipelines();
-		logger.info(`Initial pipeline complete. Next scheduled run in ${PIPELINE_INTERVAL_MINUTES} min.`, "server");
-	})();
+	if (!SKIP_INITIAL_PIPELINE) {
+		(async () => {
+			logger.info("Initial unified pipeline run starting...", "server");
+			await runAllPipelines();
+			logger.info(`Initial pipeline complete. Next scheduled run in ${PIPELINE_INTERVAL_MINUTES} min.`, "server");
+		})();
+	} else {
+		logger.info(`Initial pipeline run explicitly skipped via SKIP_INITIAL_PIPELINE=true. Waiting ${PIPELINE_INTERVAL_MINUTES} min for first scheduled cron...`, "server");
+	}
 
 	cron.schedule(CRON_PATTERN, async () => {
 		logger.info(`Cron fired — running unified pipeline (every ${PIPELINE_INTERVAL_MINUTES} min)`, "cron");
