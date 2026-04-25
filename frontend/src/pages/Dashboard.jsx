@@ -16,6 +16,7 @@ import NewEventToast from '../components/NewEventToast';
 import EventGraph from '../components/EventGraph';
 import SimulationPanel from '../components/SimulationPanel';
 import useWebSocket from '../hooks/useWebSocket';
+import Preloader from '../components/Preloader';
 import { Map, Globe as GlobeIcon, GitBranch, Zap } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 import DataHubDashboard from './DataHubDashboard';
@@ -208,22 +209,7 @@ export default function Dashboard() {
   }, []);
 
   // ── Loading screen ─────────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-[var(--bg-base)]" data-testid="loading-screen">
-        <div className="text-center space-y-4">
-          <div className="relative w-16 h-16 mx-auto">
-            <div className="absolute inset-0 border-4 border-[var(--cat-political)] border-t-transparent rounded-full animate-spin" />
-            <div className="absolute inset-2 border-4 border-[var(--cat-war)] border-b-transparent rounded-full animate-spin"
-              style={{ animationDirection: 'reverse', animationDuration: '0.8s' }} />
-          </div>
-          <p className="text-[var(--text-secondary)] font-mono text-sm tracking-widest uppercase">
-            Initializing Global Tracker AI
-          </p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <Preloader />;
 if (mode === 'datahub') {
   return (
     <DataHubDashboard
