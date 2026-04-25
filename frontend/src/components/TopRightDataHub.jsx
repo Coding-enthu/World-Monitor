@@ -1,7 +1,10 @@
+// DATA HUB
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, useDragControls } from 'framer-motion';
 import { Newspaper, Flame, CloudSun, TrendingUp, RefreshCw, PanelRightClose, PanelRightOpen, ExternalLink } from 'lucide-react';
 import { fetchStockQuotes, fetchTrendingArticles, fetchWeatherForecast, fetchWeatherRegions } from '../services/api';
+import './component-css/TopRightDataHub.css';
 
 const WEATHER_METRICS = [
   { id: 'temperature_2m', label: 'Temperature' },
@@ -184,8 +187,8 @@ export default function TopRightDataHub({ className = '' }) {
                   key={id}
                   onClick={() => setActiveTab(id)}
                   className={`flex-1 rounded-md px-2 py-1.5 text-[10px] font-mono flex items-center justify-center gap-1.5 transition-colors ${activeTab === id
-                      ? 'bg-[var(--cat-political)] text-white'
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]'
+                    ? 'bg-[var(--cat-political)] text-white'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]'
                     }`}
                 >
                   <Icon className="w-3 h-3" />
@@ -240,11 +243,10 @@ export default function TopRightDataHub({ className = '' }) {
                       <button
                         key={channel.id}
                         onClick={() => setSelectedLiveChannelId(channel.id)}
-                        className={`px-2 py-1 rounded text-[10px] font-mono border transition-colors ${
-                          channel.id === selectedLiveChannelId
+                        className={`px-2 py-1 rounded text-[10px] font-mono border transition-colors ${channel.id === selectedLiveChannelId
                             ? 'bg-[var(--cat-war)] border-[var(--cat-war)] text-white'
                             : 'bg-[var(--bg-panel)] border-[var(--border-default)] text-[var(--text-secondary)] hover:text-white'
-                        }`}
+                          }`}
                       >
                         {channel.name}
                       </button>

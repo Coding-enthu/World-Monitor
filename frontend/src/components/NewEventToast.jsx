@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, AlertTriangle } from 'lucide-react';
 import { CATEGORY_COLORS } from '../services/api';
+import './component-css/NewEventToast.css';
 
 export default function NewEventToast({ event, onDismiss, onClick }) {
   if (!event) return null;
@@ -14,38 +15,38 @@ export default function NewEventToast({ event, onDismiss, onClick }) {
         animate={{ opacity: 1, x: 0, scale: 1 }}
         exit={{ opacity: 0, x: 300, scale: 0.95 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="fixed top-20 right-6 z-40 w-[320px] glass-panel rounded-xl overflow-hidden cursor-pointer"
+        className="toast-root glass-panel"
         onClick={() => onClick?.(event)}
         data-testid="new-event-toast"
       >
-        <div className="px-4 py-3 flex items-start gap-3">
-          <div className="flex-shrink-0 mt-0.5">
-            <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ backgroundColor: `${color}20` }}>
-              <AlertTriangle className="w-4 h-4" style={{ color }} />
+        <div className="toast-body">
+          <div className="toast-icon-wrap">
+            <div className="toast-icon-box" style={{ backgroundColor: `${color}20` }}>
+              <AlertTriangle style={{ width: '1rem', height: '1rem', color }} />
             </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[9px] uppercase tracking-[0.2em] font-mono" style={{ color }}>New Event</span>
-              <span className="text-[9px] uppercase tracking-[0.2em] font-mono text-[var(--text-muted)]">{event.category}</span>
+          <div className="toast-content">
+            <div className="toast-header-row">
+              <span className="toast-new-label" style={{ color }}>New Event</span>
+              <span className="toast-category">{event.category}</span>
             </div>
-            <p className="text-xs font-medium leading-snug line-clamp-2">{event.title}</p>
-            <p className="text-[10px] text-[var(--text-muted)] mt-1">{event.country}</p>
+            <p className="toast-title">{event.title}</p>
+            <p className="toast-country">{event.country}</p>
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); onDismiss?.(); }}
-            className="flex-shrink-0 p-1 hover:bg-[var(--bg-elevated)] rounded transition-colors"
+            className="toast-dismiss-btn"
             data-testid="toast-dismiss-btn"
           >
-            <X className="w-3 h-3" />
+            <X style={{ width: '0.75rem', height: '0.75rem' }} />
           </button>
         </div>
-        {/* Progress bar */}
+        {/* Auto-dismiss progress bar */}
         <motion.div
           initial={{ width: '100%' }}
           animate={{ width: '0%' }}
           transition={{ duration: 8, ease: 'linear' }}
-          className="h-0.5"
+          className="toast-progress"
           style={{ backgroundColor: color }}
           onAnimationComplete={onDismiss}
         />

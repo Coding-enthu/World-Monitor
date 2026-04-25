@@ -1,49 +1,48 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Globe, Activity } from 'lucide-react';
+import './component-css/GlobalCounters.css';
 
 export default function GlobalCounters({ stats, isConnected }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="fixed top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 md:gap-4 glass-panel rounded-xl px-3 md:px-5 py-2 max-w-[90vw] overflow-x-auto scrollbar-hide"
+      className="gc-root glass-panel"
       data-testid="global-counters"
     >
-      {/* Logo/Brand */}
-      <div className="flex items-center gap-1.5 pr-3 md:pr-4 border-r border-[var(--border-default)]">
-        <Globe className="w-3.5 h-3.5 text-[var(--cat-political)]" />
-        <span className="text-xs font-bold tracking-tight hidden md:block" style={{ fontFamily: 'Chivo, sans-serif' }}>
-          Global Tracker
-        </span>
-        <span className="text-[9px] font-mono px-1 py-0.5 rounded-sm bg-[var(--cat-political)] text-white hidden md:block">
-          AI
-        </span>
+      {/* Logo / Brand */}
+      <div className="gc-brand">
+        <Globe style={{ width: '0.875rem', height: '0.875rem', color: 'var(--cat-political)', flexShrink: 0 }} />
+        <span className="gc-brand-name">Global Tracker</span>
+        <span className="gc-brand-badge">AI</span>
       </div>
 
-      {/* Counters */}
-      <div className="flex items-center gap-1.5">
-        <span className="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] font-mono hidden sm:block">Events</span>
-        <span className="text-lg md:text-xl font-mono font-bold tracking-tighter" data-testid="total-events-count">
+      {/* Events counter */}
+      <div className="gc-counter">
+        <span className="gc-counter-label">Events</span>
+        <span className="gc-counter-value" data-testid="total-events-count">
           {stats.total_events.toLocaleString()}
         </span>
       </div>
 
-      <div className="w-px h-5 bg-[var(--border-default)]"></div>
+      <div className="gc-divider" />
 
-      <div className="flex items-center gap-1.5">
-        <span className="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] font-mono hidden sm:block">Countries</span>
-        <span className="text-lg md:text-xl font-mono font-bold tracking-tighter" data-testid="active-countries-count">
+      {/* Countries counter */}
+      <div className="gc-counter">
+        <span className="gc-counter-label">Countries</span>
+        <span className="gc-counter-value" data-testid="active-countries-count">
           {stats.active_countries}
         </span>
       </div>
 
-      <div className="w-px h-5 bg-[var(--border-default)]"></div>
+      <div className="gc-divider" />
 
-      <div className="flex items-center gap-1.5">
-        <Activity className="w-2.5 h-2.5 text-[var(--cat-disaster)] animate-pulse-glow" />
-        <span className="text-[9px] uppercase tracking-widest text-[var(--text-secondary)] font-mono hidden sm:block">24h</span>
-        <span className="text-lg md:text-xl font-mono font-bold tracking-tighter text-[var(--cat-disaster)]" data-testid="recent-events-count">
+      {/* 24h counter */}
+      <div className="gc-counter">
+        <Activity className="animate-pulse-glow" style={{ width: '0.625rem', height: '0.625rem', color: 'var(--cat-disaster)', flexShrink: 0 }} />
+        <span className="gc-counter-label">24h</span>
+        <span className="gc-counter-value gc-counter-value--accent" data-testid="recent-events-count">
           {stats.recent_count}
         </span>
       </div>

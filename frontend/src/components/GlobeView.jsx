@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import Globe from 'react-globe.gl';
 import { CATEGORY_COLORS } from '../services/api';
+import './component-css/GlobeView.css';
 
 export default function GlobeView({ events, weatherMarkers = [], onEventClick, selectedEvent }) {
   const globeRef = useRef();
@@ -29,8 +30,6 @@ export default function GlobeView({ events, weatherMarkers = [], onEventClick, s
     if (globeRef.current) {
       const controls = globeRef.current.controls();
       if (controls) {
-        // Pause rotation if an event is clicked open OR user is hovering.
-        // Resume automatically when side panel is closed and nothing is hovered.
         controls.autoRotate = !selectedEvent && !isHovered;
       }
     }
@@ -39,7 +38,6 @@ export default function GlobeView({ events, weatherMarkers = [], onEventClick, s
   // Initial camera + basic rotate speed setup
   useEffect(() => {
     if (globeRef.current) {
-      // Provide base defaults; the state-driven hook above manages on/off
       globeRef.current.controls().autoRotate = true;
       globeRef.current.controls().autoRotateSpeed = 0.3;
       globeRef.current.pointOfView({ altitude: 2.5 }, 0);
@@ -64,22 +62,13 @@ export default function GlobeView({ events, weatherMarkers = [], onEventClick, s
 
   const pointsData = useMemo(() => {
     const eventPoints = events
-      .filter(
-        e =>
-          e.location &&
-          typeof e.location.lat === 'number' &&
-          typeof e.location.lng === 'number'
-      )
+      .filter(e => e.location && typeof e.location.lat === 'number' && typeof e.location.lng === 'number')
       .map((e, idx) => {
-        // Deterministic jitter to prevent identical/default coordinates
-        // (like [0,0]) from perfectly perfectly eclipsing each other.
         const hash = e.id ? e.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0) : idx;
         const isDefault = e.location.lat === 0 && e.location.lng === 0;
-        // Keep ocean fallback cluster wide, but tighten real country jitter to stay inside borders
         const spread = isDefault ? 12.0 : 1.2;
         const offsetLat = (((hash * 7) % 100) / 100 - 0.5) * spread;
         const offsetLng = (((hash * 13) % 100) / 100 - 0.5) * spread;
-
         return {
           lat: e.location.lat + offsetLat,
           lng: e.location.lng + offsetLng,
@@ -92,56 +81,39 @@ export default function GlobeView({ events, weatherMarkers = [], onEventClick, s
       });
 
     const weatherPoints = weatherMarkers
-      .filter((marker) => typeof marker.latitude === 'number' && typeof marker.longitude === 'number')
-      .map((marker) => ({
-        lat: marker.latitude,
-        lng: marker.longitude,
+      .filter(m => typeof m.latitude === 'number' && typeof m.longitude === 'number')
+      .map(m => ({
+        lat: m.latitude,
+        lng: m.longitude,
         size: 0.25,
         color: '#14B8A6',
-        label: `${marker.name}, ${marker.country}`,
+        label: `${m.name}, ${m.country}`,
         kind: 'weather',
-        payload: marker,
+        payload: m,
       }));
 
     return [...eventPoints, ...weatherPoints];
   }, [events, weatherMarkers]);
 
-  const ringsData = useMemo(() => {
-    return events
-      .filter(
-        e =>
-          e.location &&
-          typeof e.location.lat === 'number' &&
-          typeof e.location.lng === 'number' &&
-          (e.intensity || 0) >= 4
-      )
-      .map(e => ({
-        lat: e.location.lat,
-        lng: e.location.lng,
-        maxR: 3,
-        propagationSpeed: 2,
-        repeatPeriod: 1200,
-        color: () => CATEGORY_COLORS[e.category] || '#3B82F6',
-      }));
-  }, [events]);
+  const ringsData = useMemo(() => events
+    .filter(e => e.location && typeof e.location.lat === 'number' && typeof e.location.lng === 'number' && (e.intensity || 0) >= 4)
+    .map(e => ({
+      lat: e.location.lat,
+      lng: e.location.lng,
+      maxR: 3,
+      propagationSpeed: 2,
+      repeatPeriod: 1200,
+      color: () => CATEGORY_COLORS[e.category] || '#3B82F6',
+    })), [events]);
 
   const handlePointClick = useCallback((point) => {
-    if (point && point.kind === 'event' && point.payload && onEventClick) {
-      onEventClick(point.payload);
-    }
+    if (point?.kind === 'event' && point.payload && onEventClick) onEventClick(point.payload);
   }, [onEventClick]);
 
-  const handlePointHover = useCallback((point) => {
-    setIsHovered(!!point);
-  }, []);
+  const handlePointHover = useCallback((point) => { setIsHovered(!!point); }, []);
 
   return (
-    <div
-      ref={containerRef}
-      data-testid="globe-container"
-      className="absolute inset-0 z-0"
-      style={{ background: '#0A0B0E' }}
-    >
+    <div ref={containerRef} data-testid="globe-container" className="globe-container">
       <Globe
         ref={globeRef}
         width={dimensions.width}
@@ -169,9 +141,8 @@ export default function GlobeView({ events, weatherMarkers = [], onEventClick, s
             <div style="font-size:12px;font-weight:500;line-height:1.4;">${d.label}</div>
             <div style="font-size:10px;color:#94A3B8;margin-top:6px;">
               ${d.kind === 'weather'
-            ? `Temp ${d.payload.current?.temperature_2m ?? "N/A"}°C • Wind ${d.payload.current?.wind_speed_10m ?? "N/A"} km/h`
-            : d.payload.country
-          }
+                ? `Temp ${d.payload.current?.temperature_2m ?? "N/A"}°C • Wind ${d.payload.current?.wind_speed_10m ?? "N/A"} km/h`
+                : d.payload.country}
             </div>
           </div>
         `}

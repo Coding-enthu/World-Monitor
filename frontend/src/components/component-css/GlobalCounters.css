@@ -1,0 +1,142 @@
+/* ===== GlobalCounters.css ===== */
+
+/* ===== GlobalCounters.css ===== */
+
+.gc-root {
+  position: fixed;
+  top: calc(16px + env(safe-area-inset-top));
+
+  /* 🔥 TRUE CENTER (no shifting) */
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+
+  z-index: 10;
+
+  display: flex;
+  align-items: center;
+  gap: clamp(0.5rem, 1vw, 1rem);
+
+  width: fit-content;
+  max-width: 95vw;
+
+  padding: clamp(0.4rem, 0.8vw, 0.75rem) clamp(0.6rem, 1vw, 1.25rem);
+
+  border-radius: 0.75rem;
+
+  overflow-x: auto;
+
+  /* optional polish */
+  background: rgba(20, 20, 30, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.35);
+
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gc-root:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
+}
+@media (min-width: 768px) {
+  .gc-root {
+    gap: 1rem;
+    padding: 0.5rem 1.25rem;
+  }
+}
+
+/* Brand block */
+.gc-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding-right: 0.75rem;
+  border-right: 1px solid var(--border-default);
+  flex-shrink: 0;
+}
+@media (min-width: 768px) {
+  .gc-brand { padding-right: 1rem; }
+}
+
+.gc-brand-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-family: 'Chivo', sans-serif;
+  display: none;
+}
+@media (min-width: 768px) {
+  .gc-brand-name { display: block; }
+}
+
+.gc-brand-badge {
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.125rem;
+  background: var(--cat-political);
+  color: #ffffff;
+  display: none;
+}
+@media (min-width: 768px) {
+  .gc-brand-badge { display: block; }
+}
+
+/* Counter group */
+.gc-counter {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.gc-counter-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-secondary);
+  display: none;
+}
+@media (min-width: 640px) {
+  .gc-counter-label { display: block; }
+}
+
+/* .gc-counter-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  font-size: 1.125rem;
+} */
+
+.gc-counter-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  font-size: clamp(1rem, 1.2vw, 1.25rem);
+}
+
+/* levels */
+
+.gc-counter-label {
+  font-size: clamp(8px, 0.7vw, 10px);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-secondary);
+}
+@media (min-width: 768px) {
+  .gc-counter-value { font-size: 1.25rem; }
+}
+
+.gc-counter-value--accent {
+  color: var(--cat-disaster);
+}
+
+/* Divider */
+.gc-divider {
+  width: 1px;
+  height: 1.25rem;
+  background: var(--border-default);
+  flex-shrink: 0;
+}

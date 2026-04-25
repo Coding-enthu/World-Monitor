@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, X } from 'lucide-react';
+import './component-css/SearchBar.css';
 
 export default function SearchBar({ onSearch }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -28,38 +29,38 @@ export default function SearchBar({ onSearch }) {
       {!isExpanded ? (
         <button
           onClick={() => setIsExpanded(true)}
-          className="glass-panel rounded-md p-2.5 hover:bg-[var(--bg-elevated)] transition-colors"
+          className="sb-toggle-btn glass-panel"
           data-testid="search-toggle-btn"
         >
-          <Search className="w-4 h-4" />
+          <Search style={{ width: '1rem', height: '1rem' }} />
         </button>
       ) : (
         <motion.form
           initial={{ width: 40 }}
           animate={{ width: 280 }}
           onSubmit={handleSearch}
-          className="glass-panel rounded-md px-3 py-2 flex items-center gap-2"
+          className="sb-form glass-panel"
         >
-          <Search className="w-3.5 h-3.5 text-[var(--text-secondary)] flex-shrink-0" />
+          <Search className="sb-icon" />
           <input
             type="text"
             value={query}
             onChange={(e) => { setQuery(e.target.value); onSearch(e.target.value); }}
             onKeyDown={handleKeyDown}
             placeholder="Search events, countries..."
-            className="flex-1 bg-transparent border-none outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] min-w-0"
+            className="sb-input"
             autoFocus
             data-testid="search-input"
           />
           {query && (
-            <button type="button" onClick={handleClear} className="p-0.5 hover:bg-[var(--bg-elevated)] rounded" data-testid="search-clear-btn">
-              <X className="w-3.5 h-3.5" />
+            <button type="button" onClick={handleClear} className="sb-clear-btn" data-testid="search-clear-btn">
+              <X style={{ width: '0.875rem', height: '0.875rem' }} />
             </button>
           )}
           <button
             type="button"
             onClick={() => { setIsExpanded(false); handleClear(); }}
-            className="text-[10px] text-[var(--text-muted)] hover:text-white flex-shrink-0"
+            className="sb-esc-btn"
             data-testid="search-close-btn"
           >
             ESC

@@ -69,11 +69,17 @@
     overflow: hidden;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Chivo', sans-serif;
   }
 
-  code, .font-mono {
+  code,
+  .font-mono {
     font-family: 'JetBrains Mono', 'Courier New', monospace;
   }
 }
@@ -125,13 +131,16 @@
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
@@ -146,6 +155,7 @@
   outline: none;
   cursor: pointer;
 }
+
 .timeline-range::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
@@ -157,9 +167,11 @@
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
   transition: box-shadow 0.2s;
 }
+
 .timeline-range::-webkit-slider-thumb:hover {
   box-shadow: 0 0 16px rgba(59, 130, 246, 0.8);
 }
+
 .timeline-range::-moz-range-thumb {
   width: 14px;
   height: 14px;
@@ -172,9 +184,17 @@
 
 /* Animations */
 @keyframes pulse-glow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
 }
+
 .animate-pulse-glow {
   animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -183,12 +203,30 @@
   [data-debug-wrapper="true"] {
     display: contents !important;
   }
-  [data-debug-wrapper="true"] > * {
-    margin-left: inherit; margin-right: inherit; margin-top: inherit; margin-bottom: inherit;
-    padding-left: inherit; padding-right: inherit; padding-top: inherit; padding-bottom: inherit;
-    column-gap: inherit; row-gap: inherit; gap: inherit;
-    border-left-width: inherit; border-right-width: inherit; border-top-width: inherit; border-bottom-width: inherit;
-    border-left-style: inherit; border-right-style: inherit; border-top-style: inherit; border-bottom-style: inherit;
-    border-left-color: inherit; border-right-color: inherit; border-top-color: inherit; border-bottom-color: inherit;
+
+  [data-debug-wrapper="true"]>* {
+    margin-left: inherit;
+    margin-right: inherit;
+    margin-top: inherit;
+    margin-bottom: inherit;
+    padding-left: inherit;
+    padding-right: inherit;
+    padding-top: inherit;
+    padding-bottom: inherit;
+    column-gap: inherit;
+    row-gap: inherit;
+    gap: inherit;
+    border-left-width: inherit;
+    border-right-width: inherit;
+    border-top-width: inherit;
+    border-bottom-width: inherit;
+    border-left-style: inherit;
+    border-right-style: inherit;
+    border-top-style: inherit;
+    border-bottom-style: inherit;
+    border-left-color: inherit;
+    border-right-color: inherit;
+    border-top-color: inherit;
+    border-bottom-color: inherit;
   }
 }

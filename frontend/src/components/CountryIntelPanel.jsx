@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Shield, TrendingDown, AlertTriangle, BarChart3, MapPin } from 'lucide-react';
 import { CATEGORY_COLORS } from '../services/api';
+import './component-css/CountryIntelPanel.css';
 
 const StabilityGauge = ({ score, label }) => {
   const getColor = () => {
@@ -14,9 +15,9 @@ const StabilityGauge = ({ score, label }) => {
   const strokeDashoffset = circumference - (score / 100) * circumference;
 
   return (
-    <div className="flex flex-col items-center gap-2" data-testid="stability-gauge">
-      <div className="relative w-28 h-28">
-        <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
+    <div className="cip-gauge-container" data-testid="stability-gauge">
+      <div className="cip-gauge-svg-wrap">
+        <svg className="cip-gauge-svg" viewBox="0 0 100 100">
           <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.08)" strokeWidth="6" fill="none" />
           <circle
             cx="50" cy="50" r="42"
@@ -29,16 +30,16 @@ const StabilityGauge = ({ score, label }) => {
             style={{ transition: 'stroke-dashoffset 1s ease-out' }}
           />
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-mono font-bold" style={{ color }}>{score}</span>
-          <span className="text-[9px] uppercase tracking-widest text-[var(--text-muted)]">/ 100</span>
+        <div className="cip-gauge-center">
+          <span className="cip-gauge-score" style={{ color }}>{score}</span>
+          <span className="cip-gauge-sub">/ 100</span>
         </div>
       </div>
-      <div className="flex items-center gap-1.5">
-        {label === 'Stable' && <Shield className="w-3 h-3" style={{ color }} />}
-        {label === 'Moderate' && <AlertTriangle className="w-3 h-3" style={{ color }} />}
-        {label === 'Unstable' && <TrendingDown className="w-3 h-3" style={{ color }} />}
-        <span className="text-xs font-mono font-medium" style={{ color }}>{label}</span>
+      <div className="cip-gauge-label-row">
+        {label === 'Stable' && <Shield style={{ width: '0.75rem', height: '0.75rem', color }} />}
+        {label === 'Moderate' && <AlertTriangle style={{ width: '0.75rem', height: '0.75rem', color }} />}
+        {label === 'Unstable' && <TrendingDown style={{ width: '0.75rem', height: '0.75rem', color }} />}
+        <span className="cip-gauge-label-text" style={{ color }}>{label}</span>
       </div>
     </div>
   );
@@ -48,34 +49,30 @@ const CategoryBar = ({ category, count, total }) => {
   const color = CATEGORY_COLORS[category] || '#3B82F6';
   const pct = total > 0 ? (count / total) * 100 : 0;
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-[10px] uppercase tracking-widest font-mono text-[var(--text-secondary)] w-20 text-right truncate">{category}</span>
-      <div className="flex-1 h-2 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
+    <div className="cip-bar-row">
+      <span className="cip-bar-label">{category}</span>
+      <div className="cip-bar-track">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
           transition={{ duration: 0.8, ease: 'easeOut' }}
-          className="h-full rounded-full"
+          className="cip-bar-fill"
           style={{ backgroundColor: color }}
         />
       </div>
-      <span className="text-[10px] font-mono text-[var(--text-muted)] w-6 text-right">{count}</span>
+      <span className="cip-bar-count">{count}</span>
     </div>
   );
 };
 
 export default function CountryIntelPanel({ country, isOpen, onClose, allEvents = [] }) {
-  // Compute country intelligence from the already-fetched events
   const data = useMemo(() => {
     if (!country || !allEvents.length) return null;
-
     const countryEvents = allEvents.filter(
       e => e.country && e.country.toLowerCase() === country.toLowerCase()
     );
-
     if (countryEvents.length === 0) return null;
 
-    // Category breakdown
     const categoryBreakdown = {};
     let totalSeverity = 0;
     countryEvents.forEach(e => {
@@ -84,9 +81,6 @@ export default function CountryIntelPanel({ country, isOpen, onClose, allEvents 
     });
 
     const avgSeverity = totalSeverity / countryEvents.length;
-
-    // Stability score: lower severity → higher stability
-    // severity is 1-5, invert to 0-100 scale
     const stabilityScore = Math.round(Math.max(0, Math.min(100, (1 - avgSeverity / 5) * 100)));
     const stabilityLabel = stabilityScore >= 70 ? 'Stable' : stabilityScore >= 40 ? 'Moderate' : 'Unstable';
 
@@ -108,45 +102,45 @@ export default function CountryIntelPanel({ country, isOpen, onClose, allEvents 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 z-40 md:hidden"
+            className="cip-backdrop"
           />
           <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed right-0 top-0 h-full w-full md:w-[420px] z-50 glass-panel overflow-y-auto"
+            className="cip-panel glass-panel"
             data-testid="country-intel-panel"
           >
-            <div className="p-6 space-y-6">
+            <div className="cip-body">
               {/* Header */}
-              <div className="flex items-center justify-between">
+              <div className="cip-header">
                 <div>
-                  <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-[var(--cat-political)]">Country Intelligence</span>
-                  <h2 className="text-2xl font-bold tracking-tight mt-1" data-testid="country-name">{country}</h2>
+                  <span className="cip-header-tag">Country Intelligence</span>
+                  <h2 className="cip-country-name" data-testid="country-name">{country}</h2>
                 </div>
-                <button onClick={onClose} className="glass-light p-2 rounded-md hover:bg-[var(--bg-elevated)] transition-colors" data-testid="country-panel-close-btn">
-                  <X className="w-5 h-5" />
+                <button onClick={onClose} className="cip-close-btn" data-testid="country-panel-close-btn">
+                  <X style={{ width: '1.25rem', height: '1.25rem' }} />
                 </button>
               </div>
 
               {data ? (
                 <>
                   {/* Stability Index */}
-                  <div className="glass-light rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Shield className="w-3 h-3 text-[var(--text-secondary)]" />
-                      <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-[var(--text-secondary)]">Stability Index</span>
+                  <div className="cip-card">
+                    <div className="cip-card-header">
+                      <Shield style={{ width: '0.75rem', height: '0.75rem', color: 'var(--text-secondary)' }} />
+                      <span className="cip-card-label">Stability Index</span>
                     </div>
-                    <div className="flex items-center gap-6">
+                    <div className="cip-stability-row">
                       <StabilityGauge score={data.stability.score} label={data.stability.label} />
-                      <div className="flex-1 space-y-2">
-                        <div className="flex justify-between text-[10px] font-mono">
-                          <span className="text-[var(--text-muted)]">Events</span>
+                      <div className="cip-stats">
+                        <div className="cip-stat-row">
+                          <span className="cip-stat-key">Events</span>
                           <span>{data.event_count}</span>
                         </div>
-                        <div className="flex justify-between text-[10px] font-mono">
-                          <span className="text-[var(--text-muted)]">Avg Severity</span>
+                        <div className="cip-stat-row">
+                          <span className="cip-stat-key">Avg Severity</span>
                           <span>{data.avg_severity}/5</span>
                         </div>
                       </div>
@@ -154,12 +148,12 @@ export default function CountryIntelPanel({ country, isOpen, onClose, allEvents 
                   </div>
 
                   {/* Category Breakdown */}
-                  <div className="glass-light rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <BarChart3 className="w-3 h-3 text-[var(--text-secondary)]" />
-                      <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-[var(--text-secondary)]">Event Breakdown</span>
+                  <div className="cip-card">
+                    <div className="cip-card-header">
+                      <BarChart3 style={{ width: '0.75rem', height: '0.75rem', color: 'var(--text-secondary)' }} />
+                      <span className="cip-card-label">Event Breakdown</span>
                     </div>
-                    <div className="space-y-2.5">
+                    <div className="cip-bars">
                       {Object.entries(data.category_breakdown).map(([cat, count]) => (
                         <CategoryBar key={cat} category={cat} count={count} total={data.event_count} />
                       ))}
@@ -168,21 +162,21 @@ export default function CountryIntelPanel({ country, isOpen, onClose, allEvents 
 
                   {/* Recent Events */}
                   {data.recent_events.length > 0 && (
-                    <div className="space-y-3">
-                      <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-[var(--text-secondary)]">Recent Events</span>
-                      <div className="space-y-1.5">
+                    <div className="cip-events-section">
+                      <span className="cip-events-title">Recent Events</span>
+                      <div className="cip-events-list">
                         {data.recent_events.map((evt, idx) => (
-                          <div key={idx} className="glass-light rounded-md px-3 py-2 flex items-start gap-2" data-testid={`country-event-${idx}`}>
+                          <div key={idx} className="cip-event-item" data-testid={`country-event-${idx}`}>
                             <div
-                              className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0"
+                              className="cip-event-dot"
                               style={{ backgroundColor: CATEGORY_COLORS[evt.category] || '#3B82F6' }}
                             />
-                            <div className="min-w-0">
-                              <p className="text-xs font-medium leading-snug line-clamp-2">{evt.title}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[10px] text-[var(--text-muted)] font-mono">{evt.source_name || evt.sources?.[0]?.name || ''}</span>
-                                <span className="text-[10px] text-[var(--text-muted)] font-mono flex items-center gap-1">
-                                  <MapPin className="w-2.5 h-2.5" />
+                            <div className="cip-event-content">
+                              <p className="cip-event-title">{evt.title}</p>
+                              <div className="cip-event-meta">
+                                <span className="cip-event-source">{evt.source_name || evt.sources?.[0]?.name || ''}</span>
+                                <span className="cip-event-type">
+                                  <MapPin style={{ width: '0.625rem', height: '0.625rem' }} />
                                   {evt.type}
                                 </span>
                               </div>
@@ -194,9 +188,7 @@ export default function CountryIntelPanel({ country, isOpen, onClose, allEvents 
                   )}
                 </>
               ) : (
-                <div className="text-center py-12 text-sm text-[var(--text-muted)]">
-                  No intelligence data available for this country.
-                </div>
+                <div className="cip-empty">No intelligence data available for this country.</div>
               )}
             </div>
           </motion.div>

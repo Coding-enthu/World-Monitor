@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Clock, ChevronDown, ChevronUp, GripHorizontal } from 'lucide-react';
 import { CATEGORY_COLORS } from '../services/api';
+import './component-css/EventFeed.css';
 
 const formatTime = (dateStr) => {
   try {
@@ -11,7 +12,7 @@ const formatTime = (dateStr) => {
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-    
+
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     return `${diffDays}d ago`;
@@ -25,110 +26,114 @@ export default function EventFeed({ events, onEventClick, onCountryClick }) {
   const recentEvents = events.slice(0, 8);
 
   return (
-    <motion.div
-      drag
-      dragMomentum={false}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="fixed bottom-20 left-6 z-30 w-[340px] glass-panel rounded-xl overflow-hidden cursor-move"
-      data-testid="event-feed"
+   <motion.div className="ef-root">
+
+  {/* 🔘 Feed Button */}
+  {!isMinimized && (
+    <button
+      onClick={() => setIsMinimized(true)}
+      className="ef-trigger glass-panel"
     >
-      {/* Header / Drag Handle */}
-      <div 
-        className="px-4 py-3 border-b border-[var(--border-default)] flex items-center justify-between bg-[var(--bg-elevated)] hover:bg-[var(--border-default)] transition-colors cursor-pointer"
-        onClick={() => setIsMinimized(!isMinimized)}
-      >
-        <div className="flex items-center gap-2">
-          <GripHorizontal className="w-4 h-4 text-[var(--text-muted)]" />
-          <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-[var(--text-secondary)]">
-            Live Intel Feed
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-[10px] font-mono text-[var(--text-muted)]">
-            {events.length} events
-          </span>
-          {isMinimized ? <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" /> : <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />}
-        </div>
+      Feed
+    </button>
+  )}
+
+  {/* 📂 Sliding Panel */}
+  <motion.div
+    initial={false}
+    animate={{ x: isMinimized ? 0 : -320 }}
+    transition={{ type: 'spring', stiffness: 260, damping: 25 }}
+    className={`ef-panel glass-panel ${isMinimized ? 'ef-panel--open' : ''}`}
+  >
+    {/* ❌ Close */}
+    <button
+      onClick={() => setIsMinimized(false)}
+      className="ef-close-btn"
+    >
+      ✕
+    </button>
+
+    {/* Header */}
+    <div className="ef-header" style={{ cursor: 'default' }}>
+      <div className="ef-header-left">
+        <span className="ef-header-label">Live Intel Feed</span>
       </div>
+      <div className="ef-header-right">
+        <span className="ef-event-count">{events.length} events</span>
+      </div>
+    </div>
 
-      {/* Event List */}
-      <AnimatePresence>
-        {!isMinimized && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-y-auto max-h-[268px] scrollbar-thin cursor-auto"
-            onPointerDownCapture={(e) => e.stopPropagation()}
-          >
-        {recentEvents.length === 0 ? (
-          <div className="p-4 text-center text-sm text-[var(--text-muted)]">
-            No events found
-          </div>
-        ) : (
-          recentEvents.map((event, idx) => {
-            const color = CATEGORY_COLORS[event.category] || '#3B82F6';
-            return (
-              <motion.div
-                key={event.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.05 }}
-                onClick={() => onEventClick(event)}
-                className="px-4 py-3 border-b border-[var(--border-default)] cursor-pointer hover:bg-[var(--bg-elevated)] transition-all group"
-                data-testid={`feed-event-${idx}`}
-              >
-                <div className="flex items-start gap-3">
-                  {/* Category dot */}
-                  <div className="mt-1.5 flex-shrink-0">
-                    <div
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}60` }}
-                    />
-                  </div>
+    {/* Scrollable list */}
+    <div className="ef-list">
+      {recentEvents.length === 0 ? (
+        <div className="ef-empty">No events found</div>
+      ) : (
+        recentEvents.map((event, idx) => {
+          const color = CATEGORY_COLORS[event.category] || '#3B82F6';
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium leading-snug line-clamp-2 group-hover:text-white transition-colors">
-                      {event.title}
-                    </p>
-                    <div className="flex items-center gap-3 mt-1.5">
-                      <span
-                        className="flex items-center gap-1 text-[10px] text-[var(--text-muted)] hover:text-[var(--cat-political)] cursor-pointer transition-colors"
-                        onClick={(e) => { e.stopPropagation(); onCountryClick?.(event.country); }}
-                      >
-                        <MapPin className="w-3 h-3" />
-                        {event.country}
-                      </span>
-                      <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
-                        <Clock className="w-3 h-3" />
-                        {formatTime(event.published_at)}
-                      </span>
-                    </div>
-                  </div>
+          return (
+            <motion.div
+              key={event.id}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.05 }}
+              onClick={() => onEventClick(event)}
+              className="ef-item"
+            >
+              <div className="ef-item-inner">
 
-                  {/* Severity badge */}
-                  <div className="flex-shrink-0">
+                <div className="ef-dot-wrap">
+                  <div
+                    className="ef-dot"
+                    style={{
+                      backgroundColor: color,
+                      boxShadow: `0 0 8px ${color}60`
+                    }}
+                  />
+                </div>
+
+                <div className="ef-content">
+                  <p className="ef-title">{event.title}</p>
+
+                  <div className="ef-meta">
                     <span
-                      className="text-[10px] font-mono px-1.5 py-0.5 rounded-sm"
-                      style={{
-                        backgroundColor: `${color}15`,
-                        color: color,
-                        border: `1px solid ${color}30`
+                      className="ef-country"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCountryClick?.(event.country);
                       }}
                     >
-                      {event.severity}
+                      <MapPin size={12} />
+                      {event.country}
+                    </span>
+
+                    <span className="ef-time">
+                      <Clock size={12} />
+                      {formatTime(event.published_at)}
                     </span>
                   </div>
                 </div>
-              </motion.div>
-            );
-          })
-        )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+
+                <div className="ef-severity-wrap">
+                  <span
+                    className="ef-severity"
+                    style={{
+                      backgroundColor: `${color}15`,
+                      color: color,
+                      border: `1px solid ${color}30`,
+                    }}
+                  >
+                    {event.severity}
+                  </span>
+                </div>
+
+              </div>
+            </motion.div>
+          );
+        })
+      )}
+    </div>
+  </motion.div>
+</motion.div>
   );
 }

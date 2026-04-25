@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Send, Sparkles, Loader2 } from 'lucide-react';
 import axios from 'axios';
+import './component-css/ChatBot.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
@@ -56,7 +57,7 @@ export default function ChatBot() {
 
   return (
     <>
-      {/* Toggle Button */}
+      {/* Toggle FAB */}
       <AnimatePresence>
         {!isOpen && (
           <motion.button
@@ -66,10 +67,10 @@ export default function ChatBot() {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-20 right-6 z-40 w-12 h-12 rounded-full flex items-center justify-center bg-[var(--cat-political)] text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-shadow"
+            className="cb-fab"
             data-testid="chatbot-toggle-btn"
           >
-            <MessageCircle className="w-5 h-5" />
+            <MessageCircle style={{ width: '1.25rem', height: '1.25rem' }} />
           </motion.button>
         )}
       </AnimatePresence>
@@ -82,80 +83,75 @@ export default function ChatBot() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-6 right-6 z-50 w-[380px] h-[520px] glass-panel rounded-xl flex flex-col overflow-hidden"
+            className="cb-panel glass-panel"
             data-testid="chatbot-panel"
           >
             {/* Header */}
-            <div className="px-4 py-3 border-b border-[var(--border-default)] flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[var(--cat-political)]" />
-                <span className="text-sm font-bold tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>Intel Assistant</span>
-                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-sm bg-[var(--cat-political)]/10 text-[var(--text-muted)]">AI</span>
+            <div className="cb-header">
+              <div className="cb-header-left">
+                <Sparkles style={{ width: '1rem', height: '1rem', color: 'var(--cat-political)' }} />
+                <span className="cb-header-title">Intel Assistant</span>
+                <span className="cb-header-badge">AI</span>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 hover:bg-[var(--bg-elevated)] rounded-md transition-colors"
+                className="cb-close-btn"
                 data-testid="chatbot-close-btn"
               >
-                <X className="w-4 h-4" />
+                <X style={{ width: '1rem', height: '1rem' }} />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4" data-testid="chatbot-messages">
+            {/* Messages */}
+            <div className="cb-messages" data-testid="chatbot-messages">
               {messages.map((msg, idx) => (
                 <motion.div
                   key={idx}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.05 }}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`cb-msg-row ${msg.role === 'user' ? 'cb-msg-row--user' : 'cb-msg-row--assistant'}`}
                 >
                   <div
-                    className={`max-w-[85%] rounded-lg px-3.5 py-2.5 text-sm leading-relaxed ${
-                      msg.role === 'user'
-                        ? 'bg-[var(--cat-political)] text-white rounded-br-sm'
-                        : 'glass-light text-[var(--text-primary)] rounded-bl-sm'
-                    }`}
+                    className={`cb-bubble ${msg.role === 'user' ? 'cb-bubble--user' : 'cb-bubble--assistant glass-light'}`}
                     data-testid={`chat-message-${idx}`}
                   >
-                    <div className="whitespace-pre-wrap">{msg.content}</div>
+                    <div className="cb-bubble-content">{msg.content}</div>
                     {msg.provider && (
-                      <div className="text-[9px] font-mono text-[var(--text-muted)] mt-1 opacity-60">
-                        via {msg.provider}
-                      </div>
+                      <div className="cb-bubble-provider">via {msg.provider}</div>
                     )}
                   </div>
                 </motion.div>
               ))}
               {loading && (
-                <div className="flex justify-start">
-                  <div className="glass-light rounded-lg px-3.5 py-2.5 rounded-bl-sm flex items-center gap-2">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--cat-political)]" />
-                    <span className="text-xs text-[var(--text-muted)]">Analyzing...</span>
+                <div className="cb-typing-row">
+                  <div className="cb-typing-bubble glass-light">
+                    <Loader2 style={{ width: '0.875rem', height: '0.875rem', color: 'var(--cat-political)' }} className="animate-spin" />
+                    <span className="cb-typing-text">Analyzing...</span>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Input */}
-            <div className="px-4 py-3 border-t border-[var(--border-default)] flex-shrink-0">
-              <div className="flex items-center gap-2">
+            <div className="cb-footer">
+              <div className="cb-input-row">
                 <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Ask about global events..."
-                  className="flex-1 bg-[var(--bg-elevated)] rounded-md px-3 py-2.5 text-sm border border-[var(--border-default)] outline-none focus:border-[var(--cat-political)] transition-colors text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                  className="cb-input"
                   data-testid="chatbot-input"
                 />
                 <button
                   onClick={handleSend}
                   disabled={!input.trim() || loading}
-                  className="p-2.5 rounded-md bg-[var(--cat-political)] text-white disabled:opacity-40 hover:brightness-110 transition-all"
+                  className="cb-send-btn"
                   data-testid="chatbot-send-btn"
                 >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  {loading ? <Loader2 style={{ width: '1rem', height: '1rem' }} className="animate-spin" /> : <Send style={{ width: '1rem', height: '1rem' }} />}
                 </button>
               </div>
             </div>

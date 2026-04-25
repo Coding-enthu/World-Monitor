@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, lazy, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { fetchGeopoliticsData, fetchAvailableDates, fetchWeatherRegions, CATEGORY_LIST } from '../services/api';
 import MapView from '../components/MapView';
@@ -13,16 +14,21 @@ import ChatBot from '../components/ChatBot';
 import NewEventToast from '../components/NewEventToast';
 import EventGraph from '../components/EventGraph';
 import SimulationPanel from '../components/SimulationPanel';
-import FinanceCorrelation from '../components/FinanceCorrelation';
-import TopRightDataHub from '../components/TopRightDataHub';
 import useWebSocket from '../hooks/useWebSocket';
 import { Map, Globe as GlobeIcon, GitBranch, Zap } from 'lucide-react';
-
+import { useNavigate } from "react-router-dom";
+import DataHubDashboard from './DataHubDashboard';
 const GlobeView = lazy(() => import('../components/GlobeView'));
+
+// ─── DraggableControl ────────────────────────────────────────────────────────
+// Wraps motion.div with drag but suppresses phantom click events after a drag.
+// IMPORTANT: never renders fixed-position children inside — fixed positioning
+// inside a transformed element is broken by the browser spec. Use portals for
+// any globally-fixed UI (TimelineSlider, toasts, etc.)
 const DRAG_CLICK_THRESHOLD = 6;
 const DRAG_CLICK_SUPPRESS_MS = 250;
 
-function DraggableControl({ className = '', children, ...props }) {
+function DraggableControl({ className = '', style = {}, children, ...props }) {
   const suppressClickUntilRef = React.useRef(0);
 
   return (
@@ -42,14 +48,16 @@ function DraggableControl({ className = '', children, ...props }) {
         }
       }}
       className={`cursor-move ${className}`}
+      style={style}
       {...props}
     >
       {children}
     </motion.div>
   );
 }
-
+ 
 export default function Dashboard() {
+   const navigate = useNavigate();
   const [markers, setMarkers] = useState([]);
   const [events, setEvents] = useState([]);
   const [stats, setStats] = useState({
@@ -73,10 +81,9 @@ export default function Dashboard() {
   const [isSimulationOpen, setIsSimulationOpen] = useState(false);
   const [weatherLayerEnabled, setWeatherLayerEnabled] = useState(false);
   const [weatherMarkers, setWeatherMarkers] = useState([]);
-
-  // WebSocket
+  const [mode, setMode] = useState('map'); // 'map' | 'datahub'
+  // ── WebSocket ──────────────────────────────────────────────────────────────
   const handleNewEvent = useCallback((eventData) => {
-    // Only append real-time web-socket events if we are viewing today's default board (timelineDate is null)
     if (eventData && !timelineDate) {
       setNewEventToast(eventData);
       setMarkers(prev => {
@@ -94,7 +101,7 @@ export default function Dashboard() {
 
   const { isConnected } = useWebSocket({ onNewEvent: handleNewEvent, onStatsUpdate: handleStatsUpdate });
 
-  // Data fetching — returns event count so callers can detect empty pipeline
+  // ── Data fetching ──────────────────────────────────────────────────────────
   const fetchData = useCallback(async (targetDate = null) => {
     try {
       const data = await fetchGeopoliticsData(targetDate);
@@ -105,33 +112,23 @@ export default function Dashboard() {
     } catch (e) { console.error('Fetch error:', e); return 0; }
   }, []);
 
-  // Initialization
   useEffect(() => {
     const init = async () => {
       try {
         const dates = await fetchAvailableDates();
         setAvailableDates(dates);
         const count = await fetchData();
-        // If the pipeline hasn't finished yet (0 events), let the user know
         if (count === 0) setPipelineRunning(true);
-      }
-      catch (e) { console.error('Init error:', e); }
+      } catch (e) { console.error('Init error:', e); }
       setLoading(false);
     };
     init();
   }, [fetchData]);
 
-  // Handle timeline shifts
   useEffect(() => {
-    // Re-fetch data whenever the user commits to a new timeline date
-    if (!loading) {
-      fetchData(timelineDate);
-    }
+    if (!loading) fetchData(timelineDate);
   }, [timelineDate, fetchData, loading]);
 
-  // Background Polling:
-  // - Every 15s while pipeline is warming up (events === 0)
-  // - Every 60s normally (WebSocket handles real-time, polling is just a safety net)
   useEffect(() => {
     const POLL_MS = pipelineRunning ? 15000 : 60000;
     const interval = setInterval(async () => {
@@ -154,13 +151,9 @@ export default function Dashboard() {
     const loadWeatherRegions = async () => {
       try {
         const regions = await fetchWeatherRegions();
-        if (!cancelled) {
-          setWeatherMarkers(regions);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setWeatherMarkers([]);
-        }
+        if (!cancelled) setWeatherMarkers(regions);
+      } catch {
+        if (!cancelled) setWeatherMarkers([]);
       }
     };
 
@@ -177,10 +170,9 @@ export default function Dashboard() {
     };
   }, [weatherLayerEnabled]);
 
-  // Filtering (No timeline filtering needed, API serves exact day dataset)
+  // ── Filtering ──────────────────────────────────────────────────────────────
   const filteredMarkers = useMemo(() => {
-    let result = markers;
-    result = result.filter(e => selectedCategories.includes(e.category));
+    let result = markers.filter(e => selectedCategories.includes(e.category));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(e => e.title.toLowerCase().includes(q) || e.country.toLowerCase().includes(q));
@@ -189,16 +181,19 @@ export default function Dashboard() {
   }, [markers, selectedCategories, searchQuery]);
 
   const filteredEvents = useMemo(() => {
-    let result = events;
-    result = result.filter(e => selectedCategories.includes(e.category));
+    let result = events.filter(e => selectedCategories.includes(e.category));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(e => e.title.toLowerCase().includes(q) || e.description.toLowerCase().includes(q) || e.country.toLowerCase().includes(q));
+      result = result.filter(e =>
+        e.title.toLowerCase().includes(q) ||
+        e.description.toLowerCase().includes(q) ||
+        e.country.toLowerCase().includes(q)
+      );
     }
     return result;
   }, [events, selectedCategories, searchQuery]);
 
-  // Handlers
+  // ── Handlers ───────────────────────────────────────────────────────────────
   const handleEventClick = useCallback((event) => {
     setIsCountryPanelOpen(false);
     setSelectedEvent(event);
@@ -211,30 +206,51 @@ export default function Dashboard() {
     setIsCountryPanelOpen(true);
   }, []);
 
+  // ── Loading screen ─────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-[var(--bg-base)]" data-testid="loading-screen">
         <div className="text-center space-y-4">
           <div className="relative w-16 h-16 mx-auto">
-            <div className="absolute inset-0 border-4 border-[var(--cat-political)] border-t-transparent rounded-full animate-spin"></div>
-            <div className="absolute inset-2 border-4 border-[var(--cat-war)] border-b-transparent rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.8s' }}></div>
+            <div className="absolute inset-0 border-4 border-[var(--cat-political)] border-t-transparent rounded-full animate-spin" />
+            <div className="absolute inset-2 border-4 border-[var(--cat-war)] border-b-transparent rounded-full animate-spin"
+              style={{ animationDirection: 'reverse', animationDuration: '0.8s' }} />
           </div>
-          <p className="text-[var(--text-secondary)] font-mono text-sm tracking-widest uppercase">Initializing Global Tracker AI</p>
+          <p className="text-[var(--text-secondary)] font-mono text-sm tracking-widest uppercase">
+            Initializing Global Tracker AI
+          </p>
         </div>
       </div>
     );
   }
-
+if (mode === 'datahub') {
   return (
-    <div className="relative h-screen w-screen overflow-hidden" data-testid="dashboard">
-      {/* Pipeline warming-up banner */}
-      {pipelineRunning && (
-        <div className="fixed top-0 inset-x-0 z-50 bg-yellow-500/20 border-b border-yellow-500/40 text-yellow-300 text-xs font-mono text-center py-1.5 tracking-wider">
-          ⚡ News pipeline ingesting data — events will appear shortly. Checking every 15s…
-        </div>
-      )}
-
-      {/* Map / Globe Layer */}
+    <DataHubDashboard
+      events={events}
+      markers={filteredMarkers}
+      filteredEvents={filteredEvents}
+      onEventClick={handleEventClick}
+      onCountryClick={handleCountryClick}
+      onExit={() => setMode('map')}
+    />
+  );
+}
+  // ── Main render ────────────────────────────────────────────────────────────
+  // The root element is intentionally plain `div` with no transform/filter/will-change.
+  // This preserves the viewport stacking context so all `position: fixed` children
+  // anchor correctly to the full viewport — not to any transformed ancestor.
+  return (
+    <div
+      data-testid="dashboard"
+      style={{
+        position: 'relative',
+        width: '100vw',
+        height: '100vh',
+        overflow: 'hidden',
+        background: 'var(--bg-base)',
+      }}
+    >
+      {/* ── Layer 0: Full-viewport map / globe ── */}
       {viewMode === '2d' ? (
         <MapView
           events={filteredMarkers}
@@ -244,7 +260,7 @@ export default function Dashboard() {
           selectedEvent={selectedEvent}
         />
       ) : (
-        <Suspense fallback={<div className="absolute inset-0 bg-[var(--bg-base)]" />}>
+        <Suspense fallback={<div style={{ position: 'absolute', inset: 0, background: 'var(--bg-base)' }} />}>
           <GlobeView
             events={filteredMarkers}
             weatherMarkers={weatherMarkers}
@@ -254,10 +270,52 @@ export default function Dashboard() {
         </Suspense>
       )}
 
-      {/* Top: Global Counters */}
+      {/* ── Layer 1: Fixed overlay UI ────────────────────────────────────────
+          All overlays use `position: fixed` in their own CSS files.
+          They are direct children of this non-transformed div so fixed
+          positioning resolves to the actual viewport.
+      ───────────────────────────────────────────────────────────────────── */}
+
+     {/* 🔥 Data Hub Toggle Button */}
+<button
+  onClick={() => setMode(prev => prev === 'map' ? 'datahub' : 'map')}
+  style={{
+    position: 'fixed',
+    top: '1rem',
+    right: '1rem',
+    zIndex: 100,
+  }}
+  className="glass-panel px-3 py-2 rounded-md text-xs font-mono hover:bg-[var(--bg-elevated)] transition"
+>
+  {mode === 'map' ? 'Data Hub' : 'Back to Map'}
+</button>  {/* new dashboard button */}
+        
+
+      {/* Pipeline warming-up banner — top full-width strip */}
+      {pipelineRunning && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 300,
+          background: 'rgba(234, 179, 8, 0.15)',
+          borderBottom: '1px solid rgba(234, 179, 8, 0.4)',
+          color: '#fde68a',
+          fontSize: '0.75rem',
+          fontFamily: 'JetBrains Mono, monospace',
+          textAlign: 'center',
+          padding: '0.375rem 1rem',
+          letterSpacing: '0.05em',
+        }}>
+          ⚡ News pipeline ingesting data — events will appear shortly. Checking every 15s…
+        </div>
+      )}
+
+      {/* Top-center: Global Counters */}
       <GlobalCounters stats={stats} isConnected={isConnected} />
 
-      {/* Left: Category Filters */}
+      {/* Top-left: Category Filters */}
       <CategoryFilters
         selectedCategories={selectedCategories}
         onSelectionChange={setSelectedCategories}
@@ -266,52 +324,109 @@ export default function Dashboard() {
         onWeatherLayerChange={setWeatherLayerEnabled}
       />
 
-      {/* Right Column Controls: Search & Toggles */}
-      <div className="fixed top-20 right-4 z-30 flex flex-col items-end gap-2.5" data-testid="controls-column">
-        <TopRightDataHub />
+      {/* Top-right: Data Hub + controls column */}
+      <div
+        data-testid="controls-column"
+        style={{
+          position: 'fixed',
+          top: '5rem',
+          right: '1rem',
+          zIndex: 30,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: '0.625rem',
+        }}
+      >
+        
 
-        {/* View Toggle */}
+        {/* View toggle (2D / 3D) */}
         <DraggableControl
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex gap-1 glass-panel rounded-md p-1"
+          className="glass-panel rounded-md"
+          style={{ display: 'flex', padding: '0.25rem', gap: '0.25rem' }}
           data-testid="view-toggle"
         >
           <button
             onClick={() => setViewMode('2d')}
-            className={`px-2.5 py-1.5 rounded-sm transition-all ${viewMode === '2d' ? 'bg-[var(--cat-political)] text-white' : 'text-[var(--text-secondary)] hover:text-white'}`}
+            style={{
+              padding: '0.375rem 0.625rem',
+              borderRadius: '0.25rem',
+              background: viewMode === '2d' ? 'var(--cat-political)' : 'transparent',
+              color: viewMode === '2d' ? '#fff' : 'var(--text-secondary)',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
             data-testid="view-2d-btn"
           >
-            <Map className="w-4 h-4" />
+            <Map style={{ width: '1rem', height: '1rem' }} />
           </button>
           <button
             onClick={() => setViewMode('3d')}
-            className={`px-2.5 py-1.5 rounded-sm transition-all ${viewMode === '3d' ? 'bg-[var(--cat-political)] text-white' : 'text-[var(--text-secondary)] hover:text-white'}`}
+            style={{
+              padding: '0.375rem 0.625rem',
+              borderRadius: '0.25rem',
+              background: viewMode === '3d' ? 'var(--cat-political)' : 'transparent',
+              color: viewMode === '3d' ? '#fff' : 'var(--text-secondary)',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
             data-testid="view-3d-btn"
           >
-            <GlobeIcon className="w-4 h-4" />
+            <GlobeIcon style={{ width: '1rem', height: '1rem' }} />
           </button>
         </DraggableControl>
 
-        {/* Graph Button */}
+        {/* Event Graph button */}
         <DraggableControl data-testid="graph-btn">
           <button
             onClick={() => setIsGraphOpen(true)}
-            className="glass-panel rounded-md px-3 py-2 flex items-center gap-1.5 hover:bg-[var(--bg-elevated)] transition-colors"
+            className="glass-panel rounded-md"
+            style={{
+              padding: '0.5rem 0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+              cursor: 'pointer',
+              border: 'none',
+              background: 'unset',
+              color: 'inherit',
+              transition: 'background 0.15s',
+            }}
+            onMouseOver={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
+            onMouseOut={e => e.currentTarget.style.background = 'unset'}
           >
-            <GitBranch className="w-4 h-4 text-[var(--cat-political)]" />
-            <span className="text-[10px] font-mono text-[var(--text-secondary)] hidden lg:block">Graph</span>
+            <GitBranch style={{ width: '1rem', height: '1rem', color: 'var(--cat-political)' }} />
+            <span style={{ fontSize: '10px', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)' }}
+              className="hidden lg:block">Graph</span>
           </button>
         </DraggableControl>
 
-        {/* Simulation Button */}
+        {/* Simulation button */}
         <DraggableControl data-testid="simulation-btn">
           <button
             onClick={() => setIsSimulationOpen(true)}
-            className="glass-panel rounded-md px-3 py-2 flex items-center gap-1.5 hover:bg-[var(--bg-elevated)] transition-colors"
+            className="glass-panel rounded-md"
+            style={{
+              padding: '0.5rem 0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+              cursor: 'pointer',
+              border: 'none',
+              background: 'unset',
+              color: 'inherit',
+              transition: 'background 0.15s',
+            }}
+            onMouseOver={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
+            onMouseOut={e => e.currentTarget.style.background = 'unset'}
           >
-            <Zap className="w-4 h-4 text-[var(--cat-economic)]" />
-            <span className="text-[10px] font-mono text-[var(--text-secondary)] hidden lg:block">Simulate</span>
+            <Zap style={{ width: '1rem', height: '1rem', color: 'var(--cat-economic)' }} />
+            <span style={{ fontSize: '10px', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)' }}
+              className="hidden lg:block">Simulate</span>
           </button>
         </DraggableControl>
 
@@ -319,47 +434,66 @@ export default function Dashboard() {
         <DraggableControl>
           <SearchBar onSearch={setSearchQuery} />
         </DraggableControl>
-
-        {/* Finance Correlation (moved inside flex so it doesn't overlap toggles) */}
-        <DraggableControl>
-          <FinanceCorrelation events={events} />
-        </DraggableControl>
       </div>
 
-      {/* Bottom Left: Event Feed */}
-      <EventFeed events={filteredEvents} onEventClick={handleEventClick} onCountryClick={handleCountryClick} />
+      {/* Bottom-left: Event Feed (draggable widget) */}
+      <EventFeed
+        events={filteredEvents}
+        onEventClick={handleEventClick}
+        onCountryClick={handleCountryClick}
+      />
 
-      {/* Bottom Center: Timeline */}
-      <TimelineSlider availableDates={availableDates} events={markers} onTimelineChange={setTimelineDate} activeDate={timelineDate} />
+      {/* ── Layer 2: Global fixed UI via React Portal ────────────────────────
+          These are rendered into document.body directly to guarantee they
+          are NEVER inside a transformed ancestor — fixing fixed-position
+          centering on all browsers.
+      ───────────────────────────────────────────────────────────────────── */}
+      {createPortal(
+        <>
+          {/* Bottom-center: Timeline Slider — always truly centered */}
+          <TimelineSlider
+            availableDates={availableDates}
+            events={markers}
+            onTimelineChange={setTimelineDate}
+            activeDate={timelineDate}
+          />
 
-      {/* Panels */}
+          {/* New Event Toast */}
+          {newEventToast && (
+            <NewEventToast
+              event={newEventToast}
+              onDismiss={() => setNewEventToast(null)}
+              onClick={handleEventClick}
+            />
+          )}
+
+          {/* AI Chatbot FAB */}
+          <ChatBot />
+        </>,
+        document.body
+      )}
+
+      {/* ── Layer 3: Modals / full-screen overlays ───────────────────────── */}
       <IntelPanel
         event={selectedEvent}
         isOpen={isPanelOpen}
-        onClose={() => {
-          setIsPanelOpen(false);
-          setSelectedEvent(null);
-        }}
+        onClose={() => { setIsPanelOpen(false); setSelectedEvent(null); }}
       />
-      <CountryIntelPanel country={selectedCountry} isOpen={isCountryPanelOpen} onClose={() => setIsCountryPanelOpen(false)} allEvents={events} />
-      <EventGraph isOpen={isGraphOpen} onClose={() => setIsGraphOpen(false)} allEvents={events} />
-      <SimulationPanel isOpen={isSimulationOpen} onClose={() => setIsSimulationOpen(false)} />
-
-      {/* New Event Toast */}
-      {newEventToast && (
-        <NewEventToast event={newEventToast} onDismiss={() => setNewEventToast(null)} onClick={handleEventClick} />
-      )}
-
-      {/* AI Chatbot */}
-      <ChatBot />
-
-      {/* Status Indicator */}
-      <div className="fixed bottom-6 right-20 z-30 glass-panel rounded-md px-4 py-2 flex items-center gap-2" data-testid="status-indicator">
-        <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-[var(--cat-policy)] animate-pulse-glow' : 'bg-[var(--cat-war)]'}`} />
-        <span className="text-xs font-mono text-[var(--text-secondary)]">
-          {filteredMarkers.length} events {isConnected ? '(Live)' : '(Offline)'}
-        </span>
-      </div>
+      <CountryIntelPanel
+        country={selectedCountry}
+        isOpen={isCountryPanelOpen}
+        onClose={() => setIsCountryPanelOpen(false)}
+        allEvents={events}
+      />
+      <EventGraph
+        isOpen={isGraphOpen}
+        onClose={() => setIsGraphOpen(false)}
+        allEvents={events}
+      />
+      <SimulationPanel
+        isOpen={isSimulationOpen}
+        onClose={() => setIsSimulationOpen(false)}
+      />
     </div>
   );
 }

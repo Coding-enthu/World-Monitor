@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Loader2, GitBranch, ZoomIn, ZoomOut } from 'lucide-react';
 import * as d3Force from 'd3-force';
 import { CATEGORY_COLORS } from '../services/api';
+import './component-css/EventGraph.css';
 
 const EDGE_LABELS = {
   causes: { color: '#FF3B30', dash: '' },

@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { CATEGORY_COLORS } from '../services/api';
+import './component-css/MapView.css';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -73,30 +74,20 @@ const EventMarkers = ({ events, onEventClick, onCountryClick }) => {
   }, [onEventClick]);
 
   useEffect(() => {
-    // Remove old layer group
-    if (markersLayerRef.current) {
-      map.removeLayer(markersLayerRef.current);
-    }
-
-    // Create a new layer group
+    if (markersLayerRef.current) map.removeLayer(markersLayerRef.current);
     const layerGroup = L.layerGroup();
 
     events.forEach((event) => {
       if (!event.location || typeof event.location.lat !== 'number' || typeof event.location.lng !== 'number') return;
 
       const icon = createMarkerIcon(event.category, event.intensity);
-
       const hash = event.id ? event.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0) : 0;
       const isDefault = event.location.lat === 0 && event.location.lng === 0;
       const spread = isDefault ? 12.0 : 1.2;
       const offsetLat = (((hash * 7) % 100) / 100 - 0.5) * spread;
       const offsetLng = (((hash * 13) % 100) / 100 - 0.5) * spread;
 
-      const markerLat = event.location.lat + offsetLat;
-      const markerLng = event.location.lng + offsetLng;
-
-      const marker = L.marker([markerLat, markerLng], { icon });
-
+      const marker = L.marker([event.location.lat + offsetLat, event.location.lng + offsetLng], { icon });
       marker.on('click', () => handleMarkerClick(event));
 
       const color = CATEGORY_COLORS[event.category] || '#3B82F6';
@@ -106,25 +97,15 @@ const EventMarkers = ({ events, onEventClick, onCountryClick }) => {
           <div style="font-size:12px;font-weight:500;line-height:1.4;">${event.title}</div>
           <div style="font-size:10px;color:#94A3B8;margin-top:6px;">${event.country}</div>
         </div>`,
-        {
-          direction: 'top',
-          offset: [0, -10],
-          className: 'custom-tooltip',
-          opacity: 1,
-        }
+        { direction: 'top', offset: [0, -10], className: 'custom-tooltip', opacity: 1 }
       );
-
       layerGroup.addLayer(marker);
     });
 
     layerGroup.addTo(map);
     markersLayerRef.current = layerGroup;
 
-    return () => {
-      if (markersLayerRef.current) {
-        map.removeLayer(markersLayerRef.current);
-      }
-    };
+    return () => { if (markersLayerRef.current) map.removeLayer(markersLayerRef.current); };
   }, [events, map, handleMarkerClick]);
 
   return null;
@@ -134,10 +115,7 @@ const WeatherMarkers = ({ weatherMarkers }) => {
   const map = useMap();
 
   useEffect(() => {
-    if (weatherLayerRef.current) {
-      map.removeLayer(weatherLayerRef.current);
-    }
-
+    if (weatherLayerRef.current) map.removeLayer(weatherLayerRef.current);
     const layerGroup = L.layerGroup();
     const icon = createWeatherMarkerIcon();
 
@@ -152,12 +130,7 @@ const WeatherMarkers = ({ weatherMarkers }) => {
             Temp ${marker.current?.temperature_2m ?? "N/A"}°C • Wind ${marker.current?.wind_speed_10m ?? "N/A"} km/h • Rain ${marker.current?.precipitation_probability ?? "N/A"}%
           </div>
         </div>`,
-        {
-          direction: 'top',
-          offset: [0, -10],
-          className: 'custom-tooltip',
-          opacity: 1,
-        }
+        { direction: 'top', offset: [0, -10], className: 'custom-tooltip', opacity: 1 }
       );
       layerGroup.addLayer(weatherMarker);
     });
@@ -165,11 +138,7 @@ const WeatherMarkers = ({ weatherMarkers }) => {
     layerGroup.addTo(map);
     weatherLayerRef.current = layerGroup;
 
-    return () => {
-      if (weatherLayerRef.current) {
-        map.removeLayer(weatherLayerRef.current);
-      }
-    };
+    return () => { if (weatherLayerRef.current) map.removeLayer(weatherLayerRef.current); };
   }, [weatherMarkers, map]);
 
   return null;
@@ -178,10 +147,8 @@ const WeatherMarkers = ({ weatherMarkers }) => {
 const MapController = ({ selectedEvent }) => {
   const map = useMap();
   useEffect(() => {
-    if (selectedEvent && selectedEvent.location && typeof selectedEvent.location.lat === 'number') {
-      map.flyTo([selectedEvent.location.lat, selectedEvent.location.lng], 5, {
-        duration: 1.5,
-      });
+    if (selectedEvent?.location && typeof selectedEvent.location.lat === 'number') {
+      map.flyTo([selectedEvent.location.lat, selectedEvent.location.lng], 5, { duration: 1.5 });
     }
   }, [selectedEvent, map]);
   return null;
@@ -189,22 +156,7 @@ const MapController = ({ selectedEvent }) => {
 
 export default function MapView({ events, weatherMarkers = [], onEventClick, onCountryClick, selectedEvent }) {
   return (
-    <div data-testid="map-container" className="absolute inset-0 z-0">
-      <style>{`
-        @keyframes marker-ping {
-          0% { transform: scale(0.5); opacity: 0.3; }
-          70% { transform: scale(1); opacity: 0; }
-          100% { transform: scale(1); opacity: 0; }
-        }
-        .custom-tooltip {
-          background: transparent !important;
-          border: none !important;
-          box-shadow: none !important;
-          padding: 0 !important;
-        }
-        .custom-tooltip .leaflet-tooltip-arrow { display: none; }
-        .leaflet-control-attribution { display: none !important; }
-      `}</style>
+    <div data-testid="map-container" className="mv-container">
       <MapContainer
         center={[20, 10]}
         zoom={2}
@@ -215,15 +167,8 @@ export default function MapView({ events, weatherMarkers = [], onEventClick, onC
         attributionControl={false}
         worldCopyJump={true}
       >
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
-          attribution=""
-        />
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
-          attribution=""
-          pane="overlayPane"
-        />
+        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png" attribution="" />
+        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png" attribution="" pane="overlayPane" />
         <MapController selectedEvent={selectedEvent} />
         <EventMarkers events={events} onEventClick={onEventClick} onCountryClick={onCountryClick} />
         <WeatherMarkers weatherMarkers={weatherMarkers} />
