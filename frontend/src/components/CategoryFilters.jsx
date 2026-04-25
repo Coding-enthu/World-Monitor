@@ -1,9 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
+import { Globe, X } from 'lucide-react';
 import { CATEGORY_LIST } from '../services/api';
 import './component-css/CategoryFilters.css';
-import { X } from 'lucide-react';
+import './component-css/GlobalData.css';
+import './component-css/NaturalEvents.css';
 const selectableCategories = CATEGORY_LIST.filter((cat) => cat.id !== 'all');
 
 export default function CategoryFilters({
@@ -12,6 +13,14 @@ export default function CategoryFilters({
   stats,
   weatherLayerEnabled = false,
   onWeatherLayerChange,
+  globalPanelOpen = false,
+  onGlobalClick,
+  globalCount = 0,
+  naturalPanelOpen = false,
+  onNaturalClick,
+  naturalLayerEnabled = false,
+  onNaturalLayerChange,
+  naturalCount = 0,
 }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const allSelected = selectedCategories.length === selectableCategories.length;
@@ -107,15 +116,56 @@ export default function CategoryFilters({
         );
       })}
 
-      {/* Weather */}
+
+      {/* Global */}
       <div className="cf-weather-divider">
-        <button onClick={() => onWeatherLayerChange?.(!weatherLayerEnabled)} className="cf-weather-btn">
+        <button
+          onClick={() => onGlobalClick?.()}
+          className={`cf-global-btn${globalPanelOpen ? ' cf-global-btn--active' : ''}`}
+        >
           <div className="cf-row">
             <div className="cf-row-left">
-              <input type="checkbox" readOnly checked={weatherLayerEnabled} className="cf-checkbox" />
-              <span className="cf-weather-label">Weather</span>
+              <div className="cf-global-dot" />
+              <span className="cf-global-label">Global</span>
             </div>
-            <span className="cf-weather-tag">Layer</span>
+            <span className="cf-global-count">{globalCount}</span>
+          </div>
+        </button>
+      </div>
+
+      {/* Natural Events — layer toggle + panel opener */}
+      <div className="cf-weather-divider">
+        {/* Layer toggle row (checkbox + label) */}
+        <button
+          onClick={() => onNaturalLayerChange?.(!naturalLayerEnabled)}
+          className={`cf-natural-btn${naturalLayerEnabled ? ' cf-natural-btn--active' : ''}`}
+        >
+          <div className="cf-row">
+            <div className="cf-row-left">
+              <input type="checkbox" readOnly checked={naturalLayerEnabled} className="cf-checkbox" />
+              <div className="cf-natural-dot" />
+              <span className="cf-natural-label">Natural Events</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span className="cf-natural-count">{naturalCount}</span>
+              {/* List panel button */}
+              <button
+                onClick={(e) => { e.stopPropagation(); onNaturalClick?.(); }}
+                style={{
+                  fontSize: '9px',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  border: '1px solid rgba(20,184,166,0.4)',
+                  background: naturalPanelOpen ? 'rgba(20,184,166,0.2)' : 'transparent',
+                  color: '#2DD4BF',
+                  cursor: 'pointer',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                LIST
+              </button>
+            </div>
           </div>
         </button>
       </div>

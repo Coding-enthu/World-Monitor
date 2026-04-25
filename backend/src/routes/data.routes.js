@@ -124,4 +124,15 @@ router.get("/weather/regions", eventsLimiter, async (_req, res) => {
 	}
 });
 
+router.get("/weather/events", eventsLimiter, async (_req, res) => {
+	try {
+		const { getWeatherEvents } = require("../modules/weather/weather.service");
+		const data = await getWeatherEvents();
+		res.json({ success: true, count: (data || []).length, data: data || [] });
+	} catch (err) {
+		logger.error(`Weather events route error: ${err.message}`, "data.routes");
+		res.status(500).json({ success: false, error: "Internal Server Error" });
+	}
+});
+
 module.exports = router;

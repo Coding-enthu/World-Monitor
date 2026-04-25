@@ -46,8 +46,42 @@ const createMarkerIcon = (category, intensity) => {
   });
 };
 
-const markersLayerRef = { current: null };
-const weatherLayerRef = { current: null };
+const markersLayerRef  = { current: null };
+const weatherLayerRef  = { current: null };
+const naturalLayerRef  = { current: null };
+
+/* Cross (✕) icon for natural events */
+const createNaturalMarkerIcon = (type, severity) => {
+  const COLOR_MAP = {
+    earthquake: '#F97316', storm: '#6366F1', wildfire: '#EF4444',
+    volcano: '#DC2626', flood: '#3B82F6', blizzard: '#93C5FD', weather: '#14B8A6',
+  };
+  const color = COLOR_MAP[type?.toLowerCase()] || '#14B8A6';
+  const size  = Math.max(10, Math.min(22, 7 + (severity || 2) * 1.5));
+  const half  = size / 2;
+
+  return L.divIcon({
+    className: '',
+    html: `
+      <div style="position:relative;width:${size * 2}px;height:${size * 2}px;display:flex;align-items:center;justify-content:center;">
+        <div style="
+          position:absolute;
+          width:${size * 2}px;height:${size * 2}px;
+          border-radius:50%;
+          background:${color};
+          opacity:0.15;
+          animation:marker-ping 2.4s cubic-bezier(0,0,0.2,1) infinite;
+        "></div>
+        <svg width="${size}" height="${size}" viewBox="0 0 20 20" style="position:absolute;z-index:2;">
+          <line x1="2" y1="2" x2="18" y2="18" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+          <line x1="18" y1="2" x2="2" y2="18" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      </div>
+    `,
+    iconSize:   [size * 2, size * 2],
+    iconAnchor: [size, size],
+  });
+};
 
 const createWeatherMarkerIcon = () =>
   L.divIcon({
@@ -144,6 +178,47 @@ const WeatherMarkers = ({ weatherMarkers }) => {
   return null;
 };
 
+const NaturalEventMarkers = ({ events, onEventClick }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (naturalLayerRef.current) map.removeLayer(naturalLayerRef.current);
+    const layerGroup = L.layerGroup();
+
+    (events || []).forEach(event => {
+      if (!Array.isArray(event.coords) || event.coords.length !== 2) return;
+      const [lat, lng] = event.coords;
+      if (typeof lat !== 'number' || typeof lng !== 'number') return;
+
+      const icon   = createNaturalMarkerIcon(event.type, event.severity);
+      const COLOR_MAP = {
+        earthquake: '#F97316', storm: '#6366F1', wildfire: '#EF4444',
+        volcano: '#DC2626', flood: '#3B82F6', blizzard: '#93C5FD', weather: '#14B8A6',
+      };
+      const color = COLOR_MAP[event.type?.toLowerCase()] || '#14B8A6';
+      const marker = L.marker([lat, lng], { icon });
+
+      marker.on('click', () => onEventClick && onEventClick(event));
+      marker.bindTooltip(
+        `<div style="background:#101217;color:#fff;padding:8px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);font-family:'IBM Plex Sans',sans-serif;width:max-content;max-width:320px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.15em;color:${color};margin-bottom:4px;">${event.type || 'Natural Event'}</div>
+          <div style="font-size:12px;font-weight:500;line-height:1.4;">${event.title}</div>
+          <div style="font-size:10px;color:#94A3B8;margin-top:6px;">${event.country || ''}</div>
+        </div>`,
+        { direction: 'top', offset: [0, -10], className: 'custom-tooltip', opacity: 1 }
+      );
+      layerGroup.addLayer(marker);
+    });
+
+    layerGroup.addTo(map);
+    naturalLayerRef.current = layerGroup;
+
+    return () => { if (naturalLayerRef.current) map.removeLayer(naturalLayerRef.current); };
+  }, [events, map, onEventClick]);
+
+  return null;
+};
+
 const MapController = ({ selectedEvent }) => {
   const map = useMap();
   useEffect(() => {
@@ -154,7 +229,7 @@ const MapController = ({ selectedEvent }) => {
   return null;
 };
 
-export default function MapView({ events, weatherMarkers = [], onEventClick, onCountryClick, selectedEvent }) {
+export default function MapView({ events, weatherMarkers = [], naturalEventMarkers = [], onEventClick, onCountryClick, selectedEvent }) {
   return (
     <div data-testid="map-container" className="mv-container">
       <MapContainer
@@ -172,6 +247,7 @@ export default function MapView({ events, weatherMarkers = [], onEventClick, onC
         <MapController selectedEvent={selectedEvent} />
         <EventMarkers events={events} onEventClick={onEventClick} onCountryClick={onCountryClick} />
         <WeatherMarkers weatherMarkers={weatherMarkers} />
+        <NaturalEventMarkers events={naturalEventMarkers} onEventClick={onEventClick} />
       </MapContainer>
     </div>
   );

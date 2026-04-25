@@ -52,11 +52,8 @@ export default function IntelPanel({ event, isOpen, onClose }) {
                     <span className="ip-severity-label">Severity: {event.severity}/5</span>
                   </div>
                   <h2 className="ip-title" data-testid="event-title">{event.title}</h2>
-                </div>
-                <button onClick={onClose} className="ip-close-btn" data-testid="intel-panel-close-btn">
-                  <X style={{ width: '1.25rem', height: '1.25rem' }} />
-                </button>
               </div>
+            </div>
 
               {/* Metadata */}
               <div className="ip-meta-grid">
@@ -133,6 +130,14 @@ export default function IntelPanel({ event, isOpen, onClose }) {
                   ))}
                 </div>
               )}
+
+              {/* Close — bottom-right */}
+              <div className="ip-footer">
+                <button onClick={onClose} className="ip-close-btn" data-testid="intel-panel-close-btn">
+                  <X style={{ width: '1rem', height: '1rem' }} />
+                  Close
+                </button>
+              </div>
             </div>
           </motion.div>
         </>

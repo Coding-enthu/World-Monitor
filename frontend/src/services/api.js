@@ -156,3 +156,8 @@ export const fetchWeatherRegions = async () => {
   const res = await axios.get(`${BASE_API_URL}/weather/regions`, { timeout: 20000 });
   return res.data?.data || [];
 };
+
+export const fetchNaturalEvents = async () => {
+  const res = await axios.get(`${BASE_API_URL}/weather/events`, { timeout: 20000 });
+  return res.data?.data || [];
+};

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { fetchGeopoliticsData, fetchAvailableDates, fetchWeatherRegions, CATEGORY_LIST } from '../services/api';
 import MapView from '../components/MapView';
 import GlobalCounters from '../components/GlobalCounters';
@@ -16,6 +16,9 @@ import EventGraph from '../components/EventGraph';
 import SimulationPanel from '../components/SimulationPanel';
 import useWebSocket from '../hooks/useWebSocket';
 import Preloader from '../components/Preloader';
+import GlobalData from '../components/GlobalData';
+import NaturalEvents from '../components/NaturalEvents';
+import { fetchNaturalEvents } from '../services/api';
 import { Map, Globe as GlobeIcon, GitBranch, Zap } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 import DataHubDashboard from './DataHubDashboard';
@@ -83,6 +86,11 @@ export default function Dashboard() {
   const [weatherLayerEnabled, setWeatherLayerEnabled] = useState(false);
   const [weatherMarkers, setWeatherMarkers] = useState([]);
   const [mode, setMode] = useState('map'); // 'map' | 'datahub'
+  const [isGlobalPanelOpen, setIsGlobalPanelOpen]   = useState(false);
+  const [isNaturalPanelOpen, setIsNaturalPanelOpen] = useState(false);
+  const [naturalLayerEnabled, setNaturalLayerEnabled] = useState(false);
+  const [naturalEvents, setNaturalEvents]           = useState([]);
+  const [naturalLoading, setNaturalLoading]         = useState(false);
   // ── WebSocket ──────────────────────────────────────────────────────────────
   const handleNewEvent = useCallback((eventData) => {
     if (eventData && !timelineDate) {
@@ -171,9 +179,37 @@ export default function Dashboard() {
     };
   }, [weatherLayerEnabled]);
 
-  // ── Filtering ──────────────────────────────────────────────────────────────
+  // ── Natural Events fetch ─ triggers when layer OR panel is first enabled ──
+  useEffect(() => {
+    const shouldFetch = naturalLayerEnabled || isNaturalPanelOpen;
+    if (!shouldFetch) return;
+    if (naturalEvents.length > 0) return; // already loaded
+    let cancelled = false;
+    const load = async () => {
+      setNaturalLoading(true);
+      try {
+        const data = await fetchNaturalEvents();
+        if (!cancelled) setNaturalEvents(data);
+      } catch (e) {
+        console.error('Natural events fetch error:', e);
+      } finally {
+        if (!cancelled) setNaturalLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [naturalLayerEnabled, isNaturalPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Events where country === 'Global' are kept OUT of the map markers so they
+  // never appear as dots. They are only shown in the GlobalData panel.
+  const globalEvents = useMemo(
+    () => events.filter(e => e.country === 'Global'),
+    [events],
+  );
+
   const filteredMarkers = useMemo(() => {
-    let result = markers.filter(e => selectedCategories.includes(e.category));
+    let result = markers
+      .filter(e => e.country !== 'Global')           // exclude Global from map
+      .filter(e => selectedCategories.includes(e.category));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(e => e.title.toLowerCase().includes(q) || e.country.toLowerCase().includes(q));
@@ -241,6 +277,7 @@ if (mode === 'datahub') {
         <MapView
           events={filteredMarkers}
           weatherMarkers={weatherMarkers}
+          naturalEventMarkers={naturalLayerEnabled ? naturalEvents : []}
           onEventClick={handleEventClick}
           onCountryClick={handleCountryClick}
           selectedEvent={selectedEvent}
@@ -308,6 +345,18 @@ if (mode === 'datahub') {
         stats={stats}
         weatherLayerEnabled={weatherLayerEnabled}
         onWeatherLayerChange={setWeatherLayerEnabled}
+        globalPanelOpen={isGlobalPanelOpen}
+        onGlobalClick={() => setIsGlobalPanelOpen(p => !p)}
+        globalCount={globalEvents.length}
+        naturalPanelOpen={isNaturalPanelOpen}
+        onNaturalClick={() => setIsNaturalPanelOpen(p => !p)}
+        naturalLayerEnabled={naturalLayerEnabled}
+        onNaturalLayerChange={(val) => {
+          setNaturalLayerEnabled(val);
+          // Also open the panel when enabling so user sees the list
+          if (val) setIsNaturalPanelOpen(true);
+        }}
+        naturalCount={naturalEvents.length}
       />
 
       {/* Top-right: Data Hub + controls column */}
@@ -480,6 +529,39 @@ if (mode === 'datahub') {
         isOpen={isSimulationOpen}
         onClose={() => setIsSimulationOpen(false)}
       />
+
+      {/* ── Global Data floating panel ─────────────────────────────────── */}
+      <AnimatePresence>
+        {isGlobalPanelOpen && (
+          <GlobalData
+            events={globalEvents}
+            onClose={() => setIsGlobalPanelOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Natural Events floating panel ───────────────────────────────── */}
+      <AnimatePresence>
+        {isNaturalPanelOpen && (
+          <NaturalEvents
+            events={naturalEvents}
+            loading={naturalLoading}
+            onClose={() => setIsNaturalPanelOpen(false)}
+            onRefresh={async () => {
+              setNaturalEvents([]);
+              setNaturalLoading(true);
+              try {
+                const data = await fetchNaturalEvents();
+                setNaturalEvents(data);
+              } catch (e) {
+                console.error('Refresh error:', e);
+              } finally {
+                setNaturalLoading(false);
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
