@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Backend URL — single endpoint
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+export const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 const BASE_API_URL = `${BACKEND_URL}/api`;
 const API_URL = `${BACKEND_URL}/api/geopolitics`;
 
@@ -155,4 +155,18 @@ export const fetchWeatherForecast = async ({
 export const fetchWeatherRegions = async () => {
   const res = await axios.get(`${BASE_API_URL}/weather/regions`, { timeout: 20000 });
   return res.data?.data || [];
+};
+
+export const fetchChatRooms = async () => {
+  const res = await axios.get(`${BASE_API_URL}/chat/rooms`, { timeout: 10000 });
+  return res.data?.data || [];
+};
+
+export const createChatRoom = async ({ roomName, topic, ownerName }) => {
+  const res = await axios.post(
+    `${BASE_API_URL}/chat/rooms`,
+    { roomName, topic, ownerName },
+    { timeout: 10000 }
+  );
+  return res.data?.data || null;
 };
