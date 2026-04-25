@@ -21,3 +21,17 @@
 }
 .custom-tooltip .leaflet-tooltip-arrow { display: none; }
 .leaflet-control-attribution { display: none !important; }
+
+/* Glowing Zone Overlay for GeoJSON */
+.glowing-zone {
+  filter: drop-shadow(0 0 10px currentColor);
+  animation: zone-pulse 4s ease-in-out infinite;
+  transition: all 0.5s ease;
+  mix-blend-mode: screen;
+}
+
+@keyframes zone-pulse {
+  0%   { fill-opacity: 0.15; filter: drop-shadow(0 0 8px currentColor); }
+  50%  { fill-opacity: 0.25; filter: drop-shadow(0 0 16px currentColor); }
+  100% { fill-opacity: 0.15; filter: drop-shadow(0 0 8px currentColor); }
+}

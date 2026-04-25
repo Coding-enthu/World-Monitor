@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { CATEGORY_COLORS } from '../services/api';
 import './component-css/MapView.css';
+import ZoneOverlays from './ZoneOverlays';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -245,6 +246,7 @@ export default function MapView({ events, weatherMarkers = [], naturalEventMarke
         <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png" attribution="" />
         <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png" attribution="" pane="overlayPane" />
         <MapController selectedEvent={selectedEvent} />
+        <ZoneOverlays events={events} />
         <EventMarkers events={events} onEventClick={onEventClick} onCountryClick={onCountryClick} />
         <WeatherMarkers weatherMarkers={weatherMarkers} />
         <NaturalEventMarkers events={naturalEventMarkers} onEventClick={onEventClick} />
