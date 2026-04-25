@@ -16,7 +16,9 @@
   overflow: auto;
 }
 
-.trdh-panel--closed { width: 320px; }
+.trdh-panel--closed {
+  width: 320px;
+}
 
 /* Drag handle / titlebar */
 .trdh-titlebar {
@@ -46,7 +48,10 @@
   color: inherit;
   transition: background 0.15s;
 }
-.trdh-collapse-btn:hover { background: var(--bg-elevated); }
+
+.trdh-collapse-btn:hover {
+  background: var(--bg-elevated);
+}
 
 /* Tab bar */
 .trdh-tabs {
@@ -71,10 +76,19 @@
   cursor: pointer;
 }
 
-.trdh-tab--active { background: var(--cat-political); color: #ffffff; }
+.trdh-tab--active {
+  background: var(--cat-political);
+  color: #ffffff;
+}
 
-.trdh-tab--inactive { color: var(--text-secondary); background: none; }
-.trdh-tab--inactive:hover { background: var(--bg-elevated); }
+.trdh-tab--inactive {
+  color: var(--text-secondary);
+  background: none;
+}
+
+.trdh-tab--inactive:hover {
+  background: var(--bg-elevated);
+}
 
 /* Content scroll area */
 .trdh-content {
@@ -83,7 +97,12 @@
   height: calc(100% - 84px);
 }
 
-.trdh-content-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+.trdh-content-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
 
 .trdh-content-label {
   font-size: 10px;
@@ -102,12 +121,23 @@
   color: inherit;
   transition: background 0.15s;
 }
-.trdh-refresh-btn:hover { background: var(--bg-elevated); }
 
-.trdh-error { font-size: 0.75rem; color: var(--cat-war); margin-bottom: 0.5rem; }
+.trdh-refresh-btn:hover {
+  background: var(--bg-elevated);
+}
+
+.trdh-error {
+  font-size: 0.75rem;
+  color: var(--cat-war);
+  margin-bottom: 0.5rem;
+}
 
 /* Live news tab */
-.trdh-live-section { display: flex; flex-direction: column; gap: 0.625rem; }
+.trdh-live-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
 
 .trdh-iframe-wrap {
   border-radius: 0.375rem;
@@ -116,9 +146,19 @@
   background: #000;
 }
 
-.trdh-iframe { width: 100%; aspect-ratio: 16 / 9; display: block; border: none; }
+.trdh-iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  display: block;
+  border: none;
+}
 
-.trdh-channel-info { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.trdh-channel-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
 
 .trdh-channel-name {
   font-size: 10px;
@@ -137,9 +177,16 @@
   text-decoration: none;
   transition: color 0.15s;
 }
-.trdh-open-source-link:hover { color: #ffffff; }
 
-.trdh-channel-buttons { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+.trdh-open-source-link:hover {
+  color: #ffffff;
+}
+
+.trdh-channel-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
 
 .trdh-channel-btn {
   padding: 0.25rem 0.5rem;
@@ -162,9 +209,16 @@
   border-color: var(--border-default);
   color: var(--text-secondary);
 }
-.trdh-channel-btn--inactive:hover { color: #ffffff; }
 
-.trdh-stream-notice { font-size: 9px; color: var(--text-muted); line-height: 1.6; }
+.trdh-channel-btn--inactive:hover {
+  color: #ffffff;
+}
+
+.trdh-stream-notice {
+  font-size: 9px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
 
 /* Articles tab */
 .trdh-article-link {
@@ -175,9 +229,17 @@
   color: inherit;
   transition: background 0.15s;
 }
-.trdh-article-link:hover { background: var(--bg-elevated); }
 
-.trdh-article-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+.trdh-article-link:hover {
+  background: var(--bg-elevated);
+}
+
+.trdh-article-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
 
 .trdh-article-title {
   font-size: 0.75rem;
@@ -190,12 +252,25 @@
   overflow: hidden;
 }
 
-.trdh-article-score { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--cat-sanctions); flex-shrink: 0; }
+.trdh-article-score {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--cat-sanctions);
+  flex-shrink: 0;
+}
 
-.trdh-article-meta { font-size: 10px; color: var(--text-muted); margin-top: 0.25rem; }
+.trdh-article-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
 
 /* Stocks tab */
-.trdh-stock-source { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); }
+.trdh-stock-source {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+}
 
 .trdh-stock-item {
   border-radius: 0.375rem;
@@ -204,18 +279,39 @@
   border: 1px solid var(--border-default);
 }
 
-.trdh-stock-header { display: flex; align-items: center; justify-content: space-between; }
+.trdh-stock-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 
-.trdh-stock-symbol { font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; }
+.trdh-stock-symbol {
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+}
 
-.trdh-stock-change { font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; }
+.trdh-stock-change {
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+}
 
-.trdh-stock-name { font-size: 10px; color: var(--text-muted); }
+.trdh-stock-name {
+  font-size: 10px;
+  color: var(--text-muted);
+}
 
 /* Weather tab */
-.trdh-weather-section { display: flex; flex-direction: column; gap: 0.625rem; }
+.trdh-weather-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
 
-.trdh-weather-selects { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
+.trdh-weather-selects {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+}
 
 .trdh-weather-region-select {
   grid-column: span 2;
@@ -256,6 +352,13 @@
   border: 1px solid var(--border-default);
 }
 
-.trdh-weather-current-title { font-size: 0.75rem; font-weight: 500; }
+.trdh-weather-current-title {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
 
-.trdh-weather-current-sub { font-size: 10px; color: var(--text-muted); margin-top: 0.25rem; }
+.trdh-weather-current-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}

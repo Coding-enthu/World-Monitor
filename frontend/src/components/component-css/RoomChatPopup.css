@@ -224,6 +224,7 @@
 }
 
 @media (max-width: 840px) {
+
   .rcp-grid,
   .rcp-chat-main {
     grid-template-columns: 1fr;

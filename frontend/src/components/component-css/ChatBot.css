@@ -19,6 +19,7 @@
   border: none;
   cursor: pointer;
 }
+
 .cb-fab:hover {
   box-shadow: 0 8px 32px rgba(59, 130, 246, 0.4);
 }
@@ -78,6 +79,7 @@
   background: none;
   color: inherit;
 }
+
 .cb-close-btn:hover {
   background: var(--bg-elevated);
 }
@@ -95,8 +97,14 @@
 .cb-msg-row {
   display: flex;
 }
-.cb-msg-row--user { justify-content: flex-end; }
-.cb-msg-row--assistant { justify-content: flex-start; }
+
+.cb-msg-row--user {
+  justify-content: flex-end;
+}
+
+.cb-msg-row--assistant {
+  justify-content: flex-start;
+}
 
 .cb-bubble {
   max-width: 85%;
@@ -173,8 +181,14 @@
   border: 1px solid var(--border-default);
   color: var(--text-primary);
 }
-.cb-input::placeholder { color: var(--text-muted); }
-.cb-input:focus { border-color: var(--cat-political); }
+
+.cb-input::placeholder {
+  color: var(--text-muted);
+}
+
+.cb-input:focus {
+  border-color: var(--cat-political);
+}
 
 .cb-send-btn {
   padding: 0.625rem;
@@ -188,5 +202,12 @@
   align-items: center;
   justify-content: center;
 }
-.cb-send-btn:hover:not(:disabled) { filter: brightness(1.1); }
-.cb-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.cb-send-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.cb-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

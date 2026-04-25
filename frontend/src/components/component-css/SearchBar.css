@@ -6,6 +6,7 @@
   padding: 0.625rem;
   transition: background 0.15s;
 }
+
 .sb-toggle-btn:hover {
   background: var(--bg-elevated);
 }
@@ -35,6 +36,7 @@
   color: var(--text-primary);
   min-width: 0;
 }
+
 .sb-input::placeholder {
   color: var(--text-muted);
 }
@@ -44,6 +46,7 @@
   border-radius: 0.25rem;
   transition: background 0.15s;
 }
+
 .sb-clear-btn:hover {
   background: var(--bg-elevated);
 }
@@ -54,6 +57,7 @@
   flex-shrink: 0;
   transition: color 0.15s;
 }
+
 .sb-esc-btn:hover {
   color: #ffffff;
 }

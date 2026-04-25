@@ -45,7 +45,13 @@
     --destructive-foreground: 0 0% 98%;
     --border: 220 15% 12%;
     --input: 220 15% 12%;
-    --ring: 217 91% 60%;
+    --ring: 43 80% 55%;
+    /* warm gold — matches preloader */
+    --accent-gold: #D4AF37;
+    /* HP gold */
+    --accent-gold-dim: rgba(212, 175, 55, 0.25);
+    --accent-warm: #8B5E2A;
+    /* aged bronze */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -169,7 +175,8 @@
 }
 
 .timeline-range::-webkit-slider-thumb:hover {
-  box-shadow: 0 0 16px rgba(59, 130, 246, 0.8);
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.8);
+  /* gold glow on hover */
 }
 
 .timeline-range::-moz-range-thumb {

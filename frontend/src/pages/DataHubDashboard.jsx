@@ -463,11 +463,11 @@ function Topbar({ events, onExit, clock }) {
     }}>
       {/* Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{
+        {/* <div style={{
           width: 28, height: 28, background: 'var(--cat-political)', borderRadius: 8,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, color: '#fff',
-        }}>DH</div>
+        }}>DH</div> */}
         <Mono style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>DataHub</Mono>
       </div>
 

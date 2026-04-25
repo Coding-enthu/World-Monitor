@@ -13,7 +13,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'
 export default function ChatBot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Welcome to Global Tracker AI Intelligence. I can analyze geopolitical events, explain cause-effect relationships, and provide risk assessments. What would you like to know?' }
+    { role: 'assistant', content: 'Welcome to GeoPulse AI Intelligence. I can analyze geopolitical events, explain cause-effect relationships, and provide risk assessments. What would you like to know?' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);

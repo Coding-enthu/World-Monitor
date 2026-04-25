@@ -7,6 +7,7 @@
   left: 0;
   z-index: 1000;
 }
+
 .ef-panel {
   position: fixed;
   bottom: 5rem;
@@ -78,6 +79,7 @@
   cursor: pointer;
   transition: background 0.2s;
 }
+
 .ef-header:hover {
   background: var(--border-default);
 }
@@ -111,7 +113,8 @@
 /* Collapsible event list */
 .ef-list {
   overflow-y: auto;
-  max-height: 280px; /* ~5 items visible */
+  max-height: 280px;
+  /* ~5 items visible */
   margin-top: 0.5rem;
 }
 
@@ -119,8 +122,9 @@
 .ef-list::-webkit-scrollbar {
   width: 4px;
 }
+
 .ef-list::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 4px;
 }
 
@@ -138,9 +142,11 @@
   cursor: pointer;
   transition: background 0.15s;
 }
+
 .ef-item:hover {
   background: var(--bg-elevated);
 }
+
 .ef-item:hover .ef-title {
   color: #ffffff;
 }
@@ -195,6 +201,7 @@
   cursor: pointer;
   transition: color 0.15s;
 }
+
 .ef-country:hover {
   color: var(--cat-political);
 }

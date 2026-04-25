@@ -49,11 +49,13 @@ const SPARKLES = Array.from({ length: 24 }, (_, i) => ({
 /* loading messages that cycle */
 const LOADING_MSGS = [
   'Consulting the Marauder\'s Map…',
-  'Brewing the initialization potion…',
+  'Brewing the intelligence potion…',
   'Owling the data servers…',
   'Unlocking the Chamber of Feeds…',
   'Accio global intelligence…',
   'Casting Alohomora on the API…',
+  'GeoPulse is awakening…',
+  'Syncing global event streams…',
 ];
 
 export default function Preloader({ videoSrc = defaultVideo }) {
@@ -188,7 +190,7 @@ export default function Preloader({ videoSrc = defaultVideo }) {
             fontSize: 11, letterSpacing: '0.45em', textTransform: 'uppercase',
             color: '#6B4B1E', marginBottom: 6, opacity: 0.7,
           }}>
-            Ministry of Intelligence
+            GeoPulse
           </div>
           <div style={{
             fontFamily: "'Cinzel', serif",
@@ -196,7 +198,7 @@ export default function Preloader({ videoSrc = defaultVideo }) {
             color: '#1a0e00',
             textShadow: '0 2px 12px rgba(212,175,55,0.3)',
           }}>
-            Global Tracker
+            Global Intelligence
           </div>
           <div style={{
             fontFamily: "'IM Fell English', serif",
@@ -360,7 +362,7 @@ export default function Preloader({ videoSrc = defaultVideo }) {
           }}
         >
           <span style={{ fontSize: 14, opacity: 0.5 }}>⚡</span>
-          Platform 9¾ · Classified Intelligence
+          ⚡ GeoPulse · Real-Time Global Intelligence ⚡
           <span style={{ fontSize: 14, opacity: 0.5 }}>⚡</span>
         </motion.div>
       </div>
