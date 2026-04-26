@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const logger = require("../utils/logger");
-const { getProviderStatus, chat } = require("../config/llm-pool");
+const { getProviderStatus, chat } = require("../config/llm");
 const { eventsLimiter } = require("../middleware/rateLimiter");
 const { getRealMarketData } = require("../modules/finance/market.service");
 
@@ -161,51 +161,60 @@ router.post("/simulate", eventsLimiter, async (req, res) => {
 // ---------- POST /api/finance/correlations ----------
 router.post("/finance/correlations", eventsLimiter, async (req, res) => {
 	try {
-		const { events = [] } = req.body;
+		logger.info("POST /api/finance/correlations — Fetched exclusively via Massive API", "ai.routes");
 
-		// Build a summary of current events for the LLM
-		const eventSummary =
-			events.length > 0
-				? events
-						.slice(0, 15)
-						.map((e) => `• [${e.category || e.type}] ${e.title} (${e.country})`)
-						.join("\n")
-				: "No specific events provided — give a general geopolitical market outlook.";
-
-		// Fetch real market data
-		let marketDataText = "";
+		// Fetch real market data natively, completely bypassing the LLM
 		const realMarketData = await getRealMarketData();
-		if (realMarketData && realMarketData.length > 0) {
-			marketDataText = `\n\nREAL MARKET DATA TODAY (Use these exact values for change_pct and direction in your JSON output):\n` +
-				realMarketData.map((m) => `- ${m.name} (${m.symbol}): direction is '${m.direction}', change_pct is ${m.changePct}%`).join('\n');
-		} else {
-			marketDataText = `\n\n(Live market data unavailable. Predict the values yourself as best as you can.)`;
+
+		if (!realMarketData || realMarketData.length === 0) {
+			return res.json({
+				success: true,
+				data: {
+					correlations: [],
+					risk_level: "unknown",
+					summary: "Live market data is currently unavailable from the Massive API.",
+				},
+				provider: "massive-api",
+				model: "polygon-agg",
+			});
 		}
 
-		logger.info(`POST /api/finance/correlations — ${events.length} events, real market data: ${!!realMarketData}`, "ai.routes");
+		// Map to the exact schema the frontend expects
+		const correlations = realMarketData.map((m) => ({
+			symbol: m.symbol,
+			name: m.name,
+			direction: m.direction,
+			change_pct: m.changePct,
+			// Provide a static reason since we bypass the LLM
+			reason: `Live market trajectory recorded natively without AI sentiment.`,
+		}));
 
-		const messages = [
-			{ role: "system", content: FINANCE_SYSTEM_PROMPT },
-			{
-				role: "user",
-				content: `Analyze market correlations for these current geopolitical events:\n\n${eventSummary}${marketDataText}`,
-			},
-		];
-
-		const result = await chat(messages, { maxTokens: 1024, temperature: 0.3 });
-		const parsed = parseJSON(result.content);
+		// Determine a static aggregate risk scale based purely on crude oil & SPX vectors
+		const spx = correlations.find(c => c.symbol === "SPX");
+		const oil = correlations.find(c => c.symbol === "CL");
+		let risk = "medium";
+		
+		if (spx?.change_pct < -1.5 || oil?.change_pct > 2.0) {
+			risk = "high";
+		} else if (spx?.change_pct > 1.0) {
+			risk = "low";
+		}
 
 		res.json({
 			success: true,
-			data: parsed,
-			provider: result.provider,
-			model: result.model,
+			data: {
+				correlations,
+				risk_level: risk,
+				summary: "Live quantitative market movements tracked directly via Massive Financial Data.",
+			},
+			provider: "massive-api",
+			model: "polygon-agg",
 		});
 	} catch (err) {
-		logger.error(`Finance error: ${err.message}`, "ai.routes");
+		logger.error(`Finance native error: ${err.message}`, "ai.routes");
 		res.status(500).json({
 			success: false,
-			error: "Finance analysis temporarily unavailable",
+			error: "Massive API Market logic failed",
 			message: err.message,
 		});
 	}
