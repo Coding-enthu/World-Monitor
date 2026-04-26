@@ -507,19 +507,19 @@ function Topbar({ events, onExit, clock }) {
 /* BOTTOM STATS BAR */
 function StatsBar({ events }) {
   const counts = useMemo(() => {
-    const r = { conflict: 0, sanctions: 0, diplomatic: 0, economic: 0 };
+    const r = { conflict: 0, politics: 0, diplomatic: 0, economic: 0 };
     (events || []).forEach(e => {
-      if (['war','conflict'].includes(e.category)) r.conflict++;
-      else if (e.category === 'sanctions') r.sanctions++;
-      else if (e.category === 'diplomacy') r.diplomatic++;
-      else if (e.category === 'economic') r.economic++;
+      if (e.category === 'Armed Conflict') r.conflict++;
+      else if (e.category === 'Politics') r.politics++;
+      else if (e.category === 'Diplomacy') r.diplomatic++;
+      else if (e.category === 'Global Economy') r.economic++;
     });
     return r;
   }, [events]);
 
   const stats = [
     { label: 'Active Conflicts', val: counts.conflict,  change: '+2',  dir: 'up',   color: 'var(--cat-war)'       },
-    { label: 'Sanctions',        val: counts.sanctions, change: '—',   dir: 'flat', color: 'var(--cat-sanctions)' },
+    { label: 'Politics',         val: counts.politics,  change: '—',   dir: 'flat', color: 'var(--cat-political)' },
     { label: 'Diplomatic',       val: counts.diplomatic,change: '+7',  dir: 'up',   color: 'var(--cat-diplomacy)' },
     { label: 'Economic',         val: counts.economic,  change: '+3',  dir: 'up',   color: 'var(--cat-economic)'  },
   ];

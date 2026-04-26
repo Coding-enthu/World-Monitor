@@ -336,6 +336,9 @@ export default function Dashboard() {
   const [naturalLayerEnabled, setNaturalLayerEnabled] = useState(false);
   const [naturalEvents, setNaturalEvents]             = useState([]);
   const [naturalLoading, setNaturalLoading]           = useState(false);
+  const [cablesLayerEnabled, setCablesLayerEnabled]       = useState(false);
+  const [pipelinesLayerEnabled, setPipelinesLayerEnabled] = useState(false);
+  const [dataCentersLayerEnabled, setDataCentersLayerEnabled] = useState(false);
 
   /* ── WebSocket ─────────────────────────────────────────────────────────── */
   const handleNewEvent = useCallback((eventData) => {
@@ -510,6 +513,9 @@ export default function Dashboard() {
           events={filteredMarkers}
           weatherMarkers={weatherMarkers}
           naturalEventMarkers={naturalLayerEnabled ? naturalEvents : []}
+          cablesLayerEnabled={cablesLayerEnabled}
+          pipelinesLayerEnabled={pipelinesLayerEnabled}
+          dataCentersLayerEnabled={dataCentersLayerEnabled}
           onEventClick={handleEventClick}
           onCountryClick={handleCountryClick}
           selectedEvent={selectedEvent}
@@ -576,6 +582,12 @@ export default function Dashboard() {
           if (val) setIsNaturalPanelOpen(true);
         }}
         naturalCount={naturalEvents.length}
+        cablesLayerEnabled={cablesLayerEnabled}
+        onCablesLayerChange={setCablesLayerEnabled}
+        pipelinesLayerEnabled={pipelinesLayerEnabled}
+        onPipelinesLayerChange={setPipelinesLayerEnabled}
+        dataCentersLayerEnabled={dataCentersLayerEnabled}
+        onDataCentersLayerChange={setDataCentersLayerEnabled}
       />
 
       {/* Top-right: controls column — HP-styled shell buttons */}

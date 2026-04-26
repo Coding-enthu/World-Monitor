@@ -21,6 +21,12 @@ export default function CategoryFilters({
   naturalLayerEnabled = false,
   onNaturalLayerChange,
   naturalCount = 0,
+  cablesLayerEnabled = false,
+  onCablesLayerChange,
+  pipelinesLayerEnabled = false,
+  onPipelinesLayerChange,
+  dataCentersLayerEnabled = false,
+  onDataCentersLayerChange,
 }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const allSelected = selectedCategories.length === selectableCategories.length;
@@ -136,9 +142,11 @@ export default function CategoryFilters({
       {/* Natural Events — layer toggle + panel opener */}
       <div className="cf-weather-divider">
         {/* Layer toggle row (checkbox + label) */}
-        <button
+        <div
           onClick={() => onNaturalLayerChange?.(!naturalLayerEnabled)}
           className={`cf-natural-btn${naturalLayerEnabled ? ' cf-natural-btn--active' : ''}`}
+          role="button"
+          tabIndex={0}
         >
           <div className="cf-row">
             <div className="cf-row-left">
@@ -167,7 +175,42 @@ export default function CategoryFilters({
               </button>
             </div>
           </div>
-        </button>
+        </div>
+      </div>
+
+      {/* Infrastructure Filters */}
+      <div className="cf-weather-divider" style={{ marginTop: '12px' }}>
+         <div style={{ fontSize: '10px', color: 'var(--hp-gold)', paddingLeft: '8px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Infrastructure</div>
+         
+         <button onClick={() => onCablesLayerChange?.(!cablesLayerEnabled)} className={`cf-natural-btn${cablesLayerEnabled ? ' cf-natural-btn--active' : ''}`}>
+           <div className="cf-row">
+             <div className="cf-row-left">
+               <input type="checkbox" readOnly checked={cablesLayerEnabled} className="cf-checkbox" />
+               <div className="cf-natural-dot" style={{ background: '#00E5FF', boxShadow: '0 0 5px #00E5FF' }} />
+               <span className="cf-natural-label">Submarine Cables</span>
+             </div>
+           </div>
+         </button>
+
+         <button onClick={() => onPipelinesLayerChange?.(!pipelinesLayerEnabled)} className={`cf-natural-btn${pipelinesLayerEnabled ? ' cf-natural-btn--active' : ''}`} style={{ marginTop: '4px' }}>
+           <div className="cf-row">
+             <div className="cf-row-left">
+               <input type="checkbox" readOnly checked={pipelinesLayerEnabled} className="cf-checkbox" />
+               <div className="cf-natural-dot" style={{ background: '#FF6B00', boxShadow: '0 0 5px #FF6B00' }} />
+               <span className="cf-natural-label">Pipelines</span>
+             </div>
+           </div>
+         </button>
+
+         <button onClick={() => onDataCentersLayerChange?.(!dataCentersLayerEnabled)} className={`cf-natural-btn${dataCentersLayerEnabled ? ' cf-natural-btn--active' : ''}`} style={{ marginTop: '4px' }}>
+           <div className="cf-row">
+             <div className="cf-row-left">
+               <input type="checkbox" readOnly checked={dataCentersLayerEnabled} className="cf-checkbox" />
+               <div className="cf-natural-dot" style={{ background: '#00FFB2', boxShadow: '0 0 5px #00FFB2' }} />
+               <span className="cf-natural-label">Data Centers</span>
+             </div>
+           </div>
+         </button>
       </div>
 
     </div>

@@ -5,6 +5,9 @@ import L from 'leaflet';
 import { CATEGORY_COLORS } from '../services/api';
 import './component-css/MapView.css';
 import ZoneOverlays from './ZoneOverlays';
+import SubmarineCables from './SubmarineCables';
+import Pipelines from './Pipelines';
+import DataCenters from './DataCenters';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -230,7 +233,17 @@ const MapController = ({ selectedEvent }) => {
   return null;
 };
 
-export default function MapView({ events, weatherMarkers = [], naturalEventMarkers = [], onEventClick, onCountryClick, selectedEvent }) {
+export default function MapView({ 
+  events, 
+  weatherMarkers = [], 
+  naturalEventMarkers = [], 
+  cablesLayerEnabled = false,
+  pipelinesLayerEnabled = false,
+  dataCentersLayerEnabled = false,
+  onEventClick, 
+  onCountryClick, 
+  selectedEvent 
+}) {
   return (
     <div data-testid="map-container" className="mv-container">
       <MapContainer
@@ -246,6 +259,9 @@ export default function MapView({ events, weatherMarkers = [], naturalEventMarke
         <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png" attribution="" />
         <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png" attribution="" pane="overlayPane" />
         <MapController selectedEvent={selectedEvent} />
+        {cablesLayerEnabled && <SubmarineCables />}
+        {pipelinesLayerEnabled && <Pipelines />}
+        {dataCentersLayerEnabled && <DataCenters />}
         <ZoneOverlays events={events} />
         <EventMarkers events={events} onEventClick={onEventClick} onCountryClick={onCountryClick} />
         <WeatherMarkers weatherMarkers={weatherMarkers} />
