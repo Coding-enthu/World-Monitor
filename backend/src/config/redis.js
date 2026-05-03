@@ -36,11 +36,24 @@ const _diagHost = redisUrl
 	? redisUrl.replace(/:\/\/[^@]*@/, "://***@") // mask credentials in URL
 	: `${process.env.REDIS_HOST || "127.0.0.1"}:${process.env.REDIS_PORT || 6379}`;
 
+const _diagHostname = (() => {
+	if (!redisUrl) return process.env.REDIS_HOST || "127.0.0.1";
+	try {
+		return new URL(redisUrl).hostname;
+	} catch {
+		return "";
+	}
+})();
+
 const _isCloudHost =
-	_diagHost.includes("redislabs.com") ||
-	_diagHost.includes("upstash.io") ||
-	_diagHost.includes("redis.cloud") ||
-	_diagHost.includes("railway.app");
+	_diagHostname === "redislabs.com" ||
+	_diagHostname.endsWith(".redislabs.com") ||
+	_diagHostname === "upstash.io" ||
+	_diagHostname.endsWith(".upstash.io") ||
+	_diagHostname === "redis.cloud" ||
+	_diagHostname.endsWith(".redis.cloud") ||
+	_diagHostname === "railway.app" ||
+	_diagHostname.endsWith(".railway.app");
 
 logger.info(
 	`Redis config → host: ${_diagHost} | TLS: ${tlsEnabled ? "ON ✅" : "OFF ⚠️"} | db: ${baseOptions.db}`,
