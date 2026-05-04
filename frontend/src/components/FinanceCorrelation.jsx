@@ -4,7 +4,7 @@ import { TrendingUp, TrendingDown, Minus, BarChart3, Loader2, RefreshCw } from '
 import axios from 'axios';
 import './component-css/FinanceCorrelation.css';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080';
 
 /**
  * FinanceCorrelation — AI-powered market correlation panel.
@@ -141,4 +141,3 @@ export default function FinanceCorrelation({ events = [] }) {
     </motion.div>
   );
 }
-

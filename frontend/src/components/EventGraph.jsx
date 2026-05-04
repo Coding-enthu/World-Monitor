@@ -17,7 +17,7 @@ export default function EventGraph({ isOpen, onClose, allEvents = [] }) {
   const canvasRef = useRef(null);
   const [graphData, setGraphData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [hoveredNode, setHoveredNode] = useState(null);
+  const [hoveredNode] = useState(null);
   const [scale, setScale] = useState(1);
   const simulationRef = useRef(null);
   const nodesRef = useRef([]);
@@ -27,65 +27,43 @@ export default function EventGraph({ isOpen, onClose, allEvents = [] }) {
   const buildGraph = useCallback(() => {
     setLoading(true);
     setTimeout(() => {
-      if (!allEvents.length) { setLoading(false); return; }
+      try {
+        if (!allEvents.length) {
+          setGraphData({ nodes: [], edges: [] });
+          return;
+        }
 
-      const nodes = allEvents.slice(0, 20).map(e => ({
-        id: e.id,
-        label: e.title.substring(0, 40),
-        category: e.category,
-        country: e.country,
-        intensity: e.severity || 3,
-      }));
+        const nodes = allEvents.slice(0, 20).map((e, index) => ({
+          id: e?.id ?? `event-${index}-${e?.timestamp || Date.now()}`,
+          label: String(e?.title || e?.description || 'Untitled Event').substring(0, 40),
+          category: e?.category,
+          country: e?.country,
+          intensity: e?.severity || 3,
+        }));
 
-      // Build edges between events that share the same country
-      const edges = [];
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          if (nodes[i].country === nodes[j].country) {
-            edges.push({
-              source: nodes[i].id,
-              target: nodes[j].id,
-              label: 'linked_to',
-              strength: 1,
-            });
+        // Build edges between events that share the same country
+        const edges = [];
+        for (let i = 0; i < nodes.length; i++) {
+          for (let j = i + 1; j < nodes.length; j++) {
+            if (nodes[i].country && nodes[i].country === nodes[j].country) {
+              edges.push({
+                source: nodes[i].id,
+                target: nodes[j].id,
+                label: 'linked_to',
+                strength: 1,
+              });
+            }
           }
         }
-      }
 
-      setGraphData({ nodes, edges });
-      setLoading(false);
+        setGraphData({ nodes, edges });
+      } finally {
+        setLoading(false);
+      }
     }, 500);
   }, [allEvents]);
 
-  useEffect(() => {
-    if (isOpen && !graphData) buildGraph();
-  }, [isOpen, graphData, buildGraph]);
-
-  useEffect(() => {
-    if (!graphData || !canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const width = canvas.width = canvas.offsetWidth * 2;
-    const height = canvas.height = canvas.offsetHeight * 2;
-    ctx.scale(2, 2);
-
-    const nodes = graphData.nodes.map(n => ({ ...n, x: Math.random() * width / 2, y: Math.random() * height / 2 }));
-    const edges = graphData.edges.map(e => ({ ...e }));
-    nodesRef.current = nodes;
-    edgesRef.current = edges;
-
-    const simulation = d3Force.forceSimulation(nodes)
-      .force('charge', d3Force.forceManyBody().strength(-200))
-      .force('center', d3Force.forceCenter(width / 4, height / 4))
-      .force('link', d3Force.forceLink(edges).id(d => d.id).distance(120).strength(0.5))
-      .force('collision', d3Force.forceCollide().radius(30))
-      .on('tick', () => draw(ctx, nodes, edges, width / 2, height / 2));
-
-    simulationRef.current = simulation;
-    return () => simulation.stop();
-  }, [graphData, scale]);
-
-  const draw = (ctx, nodes, edges, w, h) => {
+  const draw = useCallback((ctx, nodes, edges, w, h) => {
     ctx.clearRect(0, 0, w, h);
     ctx.save();
 
@@ -153,7 +131,35 @@ export default function EventGraph({ isOpen, onClose, allEvents = [] }) {
     });
 
     ctx.restore();
-  };
+  }, [hoveredNode]);
+
+  useEffect(() => {
+    if (isOpen && !graphData) buildGraph();
+  }, [isOpen, graphData, buildGraph]);
+
+  useEffect(() => {
+    if (!graphData || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width = canvas.offsetWidth * 2;
+    const height = canvas.height = canvas.offsetHeight * 2;
+    ctx.scale(2, 2);
+
+    const nodes = graphData.nodes.map(n => ({ ...n, x: Math.random() * width / 2, y: Math.random() * height / 2 }));
+    const edges = graphData.edges.map(e => ({ ...e }));
+    nodesRef.current = nodes;
+    edgesRef.current = edges;
+
+    const simulation = d3Force.forceSimulation(nodes)
+      .force('charge', d3Force.forceManyBody().strength(-200))
+      .force('center', d3Force.forceCenter(width / 4, height / 4))
+      .force('link', d3Force.forceLink(edges).id(d => d.id).distance(120).strength(0.5))
+      .force('collision', d3Force.forceCollide().radius(30))
+      .on('tick', () => draw(ctx, nodes, edges, width / 2, height / 2));
+
+    simulationRef.current = simulation;
+    return () => simulation.stop();
+  }, [draw, graphData, scale]);
 
   return (
     <AnimatePresence>
